@@ -1,0 +1,23 @@
+PREMIERE + PANEL TELEFEDERAL
+
+Este paquete incluye un panel interno para Adobe Premiere:
+TELEFEDERAL Bridge.
+
+Para instalarlo en una PC:
+
+1. Cerrar Premiere.
+2. Ejecutar "Instalar Panel Premiere TELEFEDERAL.cmd".
+3. Abrir Premiere.
+4. Ir a Ventana > Extensiones o Ventana > Extensiones heredadas.
+5. Abrir "TELEFEDERAL Bridge".
+6. Dejar ese panel abierto dentro de Premiere.
+
+Cuando el panel TELEFEDERAL mande Play o Stop, Premiere lo recibe desde este panel interno.
+No hace falta que TELEFEDERAL abra Premiere ni lo traiga al frente.
+
+Si no aparece:
+
+- Cerrar Premiere y abrirlo de nuevo.
+- Ejecutar otra vez "Instalar Panel Premiere TELEFEDERAL.cmd".
+- Revisar que exista esta carpeta:
+  %APPDATA%\Adobe\CEP\extensions\com.telefederal.premierebridge

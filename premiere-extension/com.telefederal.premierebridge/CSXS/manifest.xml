@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.telefederal.premierebridge" ExtensionBundleVersion="1.0.1" ExtensionBundleName="TELEFEDERAL Bridge" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.telefederal.premierebridge" ExtensionBundleVersion="1.0.2" ExtensionBundleName="TELEFEDERAL Bridge" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.telefederal.premierebridge.panel" Version="1.0.1"/>
+    <Extension Id="com.telefederal.premierebridge.panel" Version="1.0.2"/>
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
@@ -23,6 +23,8 @@
           <CEFCommandLine>
             <Parameter>--allow-file-access-from-files</Parameter>
             <Parameter>--allow-running-insecure-content</Parameter>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-context</Parameter>
           </CEFCommandLine>
         </Resources>
         <Lifecycle>

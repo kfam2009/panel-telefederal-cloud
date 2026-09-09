@@ -553,13 +553,13 @@ const PUBLICIDAD_ACTIONS = {
     {
       title: "PNTS",
       actions: [
-        { label: "CATA", fn: "CutDirect", input: "51" },
-        { label: "TU SUEÑO COLCHONES", fn: "CutDirect", input: "52" },
-        { label: "ESTAMPADOS BAHIA", fn: "CutDirect", input: "53" },
+        { label: "CATA REFRIGERACION", fn: "CutDirect", input: "51" },
+        { label: "COLCHONES ESTE", fn: "CutDirect", input: "52" },
+        { label: "ESTAMPAS BAHIA", fn: "CutDirect", input: "53" },
         { label: "FARMACIA TAVERNA", fn: "CutDirect", input: "54" },
-        { label: "FILLIPONE", fn: "CutDirect", input: "55" },
-        { label: "FENIX FINANCIERA", fn: "CutDirect", input: "56" },
-        { label: "MECANIZADOS RS", fn: "CutDirect", input: "59" },
+        { label: "FILIPPONE", fn: "CutDirect", input: "55" },
+        { label: "FINANCIERA FENIX", fn: "CutDirect", input: "56" },
+        { label: "MECANIZADOS SR", fn: "CutDirect", input: "59" },
         { label: "LOCOS POR LA CERVEZA", fn: "CutDirect", input: "69", resetOnComplete: true },
         { label: "LUBRICENTRO", fn: "CutDirect", input: "61" },
         { label: "ESTILORAK", fn: "CutDirect", input: "63" }
@@ -1474,6 +1474,11 @@ function renderPanelTabs() {
 
 function renderPublicidades() {
   if (!els.publicidadesBoard) return;
+  const scrollPositions = {};
+  els.publicidadesBoard.querySelectorAll(".publicidad-actions").forEach((list) => {
+    const key = list.dataset.publicidadColumn;
+    if (key) scrollPositions[key] = list.scrollTop;
+  });
   const columns = PUBLICIDAD_ACTIONS[state.activeProject] || [];
   if (!columns.length) {
     els.publicidadesBoard.innerHTML = '<p class="empty">Esta pestana por ahora no tiene publicidades cargadas.</p>';
@@ -1487,6 +1492,7 @@ function renderPublicidades() {
     title.textContent = column.title;
     const list = document.createElement("div");
     list.className = "publicidad-actions";
+    list.dataset.publicidadColumn = column.title;
     column.actions.forEach((action, index) => {
       const button = document.createElement("button");
       button.type = "button";
@@ -1505,6 +1511,7 @@ function renderPublicidades() {
     list.appendChild(tail);
     section.append(title, list);
     els.publicidadesBoard.appendChild(section);
+    if (scrollPositions[column.title]) list.scrollTop = scrollPositions[column.title];
   });
 }
 

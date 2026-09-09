@@ -2119,7 +2119,7 @@ function applyLocalAssignment(layoutInput, layer, cameraInput) {
 
 function monitorUrl(path) {
   const base = window.PANEL_CONFIG?.monitorBase || "";
-  return `${base}${path}`;
+  return `${base}${path}?v=${Date.now()}`;
 }
 
 function renderMonitors() {
@@ -2140,10 +2140,12 @@ function renderMonitors() {
   Object.values(monitorPairs).forEach(([previewImage, programImage]) => {
     if (previewImage === activePair[0] && programImage === activePair[1]) {
       if (previewImage.dataset.monitorStream !== "preview") {
+        previewImage.onerror = () => { delete previewImage.dataset.monitorStream; };
         previewImage.src = monitorUrl("/monitor/preview.mjpg");
         previewImage.dataset.monitorStream = "preview";
       }
       if (programImage.dataset.monitorStream !== "program") {
+        programImage.onerror = () => { delete programImage.dataset.monitorStream; };
         programImage.src = monitorUrl("/monitor/program.mjpg");
         programImage.dataset.monitorStream = "program";
       }

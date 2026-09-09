@@ -175,7 +175,7 @@ function sendPremiereCommand(req, res) {
 
   premiereRequests.set(requestId, { res, timeout });
   const requestPath = new URL(req.url, `http://${req.headers.host}`).pathname;
-  const command = requestPath.includes("stop") ? "stopFocus" : requestPath.includes("play-forward") ? "playForwardFocus" : requestPath.includes("play-focus") ? "playToggleFocus" : "playToggle";
+  const command = requestPath.includes("stop-background") ? "stopBackground" : requestPath.includes("play-background") ? "playForwardBackground" : requestPath.includes("stop") ? "stopFocus" : requestPath.includes("play-forward") ? "playForwardFocus" : requestPath.includes("play-focus") ? "playToggleFocus" : "playToggle";
   premiere.send(JSON.stringify({ type: "premiere-command", id: requestId, command }));
 }
 

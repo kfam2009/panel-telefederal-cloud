@@ -544,8 +544,8 @@ const QUICK_ACTIONS = {
 };
 
 const GLOBAL_QUICK_ACTIONS = [
-  { label: "Premiere Play", kind: "premiere", command: "playForwardFocus" },
-  { label: "Premiere Stop", kind: "premiere", command: "stopFocus" }
+  { label: "Premiere Play", kind: "premiere", command: "playForwardBackground" },
+  { label: "Premiere Stop", kind: "premiere", command: "stopBackground" }
 ];
 
 const PUBLICIDAD_ACTIONS = {
@@ -2696,7 +2696,7 @@ async function runQuickAction(index) {
   if (action.kind === "premiere") {
     const isStop = action.command === "stopFocus";
     setLog(`Enviando ${isStop ? "Stop" : "Play"} a Premiere...`);
-    const endpoint = isStop ? "stop" : action.command === "playForwardFocus" ? "play-forward" : action.command === "playToggleFocus" ? "play-focus" : "play";
+    const endpoint = isStop ? "stop-background" : action.command === "playForwardBackground" ? "play-background" : action.command === "playForwardFocus" ? "play-forward" : action.command === "playToggleFocus" ? "play-focus" : "play";
     const result = await callPremiere(endpoint);
     setLog(`Premiere: ${result.message || "comando enviado."}`);
     return;

@@ -67,6 +67,7 @@ h2 { font-size: 1.1rem; }
 .quick-action { background: #242b38; border-color: #4b5568; flex: 0 0 auto; font-size: .72rem; font-weight: 900; min-height: 30px; min-width: 82px; padding: 0 8px; white-space: nowrap; }
 .quick-action.is-air { background: #692020; border-color: #b64c4c; }
 .quick-action.is-preview { background: #14594f; border-color: rgba(68,215,182,.78); }
+.quick-action.is-premiere { background: #343047; border-color: #8f84d8; }
 .quick-action:not(:disabled):hover { filter: brightness(1.16); }
 
 .workspace { background: var(--surface); border: 1px solid var(--line); flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 8px; }

@@ -543,6 +543,10 @@ const QUICK_ACTIONS = {
   ]
 };
 
+const GLOBAL_QUICK_ACTIONS = [
+  { label: "Premiere Play", kind: "premiere", command: "playToggle" }
+];
+
 const PUBLICIDAD_ACTIONS = {
   telefederal: [
     {
@@ -1124,6 +1128,22 @@ async function callVmix(params = {}) {
   return requestText(url);
 }
 
+async function callPremiere(action = "play") {
+  const response = await fetch(`/premiere/${encodeURIComponent(action)}`, {
+    method: "POST",
+    cache: "no-store"
+  });
+  const text = await response.text();
+  let payload = {};
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    payload = { error: text };
+  }
+  if (!response.ok) throw new Error(payload.error || text || "No pude controlar Premiere.");
+  return payload;
+}
+
 async function requestText(url) {
   if (typeof fetch === "function") {
     const response = await fetch(url, { cache: "no-store" });
@@ -1385,7 +1405,7 @@ function renderMasterMeter() {
 }
 
 function renderQuickActions() {
-  const actions = (QUICK_ACTIONS[state.activeProject] || [])
+  const actions = [...GLOBAL_QUICK_ACTIONS, ...(QUICK_ACTIONS[state.activeProject] || [])]
     .map((action, quickIndex) => ({ ...action, quickIndex }));
   if (!els.quickActions) return;
   els.quickActions.hidden = actions.length === 0;
@@ -1393,7 +1413,7 @@ function renderQuickActions() {
   actions.forEach((action, index) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `quick-action ${action.kind === "preview" ? "is-preview" : "is-air"}`;
+    button.className = `quick-action ${action.kind === "preview" ? "is-preview" : action.kind === "premiere" ? "is-premiere" : "is-air"}`;
     button.textContent = action.label;
     button.dataset.quickAction = String(action.quickIndex);
     els.quickActions.appendChild(button);
@@ -2534,8 +2554,14 @@ async function runPtzCommand(command, value = "") {
 }
 
 async function runQuickAction(index) {
-  const action = (QUICK_ACTIONS[state.activeProject] || [])[Number(index)];
+  const action = [...GLOBAL_QUICK_ACTIONS, ...(QUICK_ACTIONS[state.activeProject] || [])][Number(index)];
   if (!action) return;
+  if (action.kind === "premiere") {
+    setLog("Enviando Play/Pause a Premiere...");
+    await callPremiere("play");
+    setLog("Premiere: Play/Pause enviado.");
+    return;
+  }
   if (["CutDirect", "PreviewInput"].includes(action.fn) && action.input && action.input !== "0") {
     assertPlayableInput(action.input, action.label);
   }

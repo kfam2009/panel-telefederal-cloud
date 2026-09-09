@@ -36,6 +36,8 @@ const bridgeRequests = new Map();
 const bridgeMonitorStreams = new Map();
 const rtcViewers = new Map();
 let rtcPublisher = null;
+const premiereClients = new Set();
+const premiereRequests = new Map();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -115,6 +117,73 @@ function servePanelConfig(res) {
       iceServers
     })};`,
     "text/javascript; charset=utf-8"
+  );
+}
+
+function getPremiereClient() {
+  for (const socket of premiereClients) {
+    if (socket.readyState === WebSocket.OPEN) return socket;
+  }
+
+  return null;
+}
+
+function premiereStatus(res) {
+  send(
+    res,
+    200,
+    JSON.stringify({ connected: !!getPremiereClient(), clients: premiereClients.size }),
+    "application/json; charset=utf-8"
+  );
+}
+
+function sendPremiereCommand(req, res) {
+  if (req.method !== "POST") {
+    send(res, 405, "Metodo no permitido.");
+    return;
+  }
+
+  const premiere = getPremiereClient();
+  if (!premiere) {
+    send(
+      res,
+      502,
+      JSON.stringify({
+        error: "No hay bridge de Premiere conectado.",
+        hint: "Abrir el Bridge Premiere TELEFEDERAL en la PC donde corre Adobe Premiere Pro."
+      }),
+      "application/json; charset=utf-8"
+    );
+    return;
+  }
+
+  const requestId = `premiere-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const timeout = setTimeout(() => {
+    premiereRequests.delete(requestId);
+    send(res, 504, "Timeout esperando respuesta del bridge de Premiere.");
+  }, 5000);
+
+  premiereRequests.set(requestId, { res, timeout });
+  premiere.send(JSON.stringify({ type: "premiere-command", id: requestId, command: "playToggle" }));
+}
+
+function completePremiereRequest(message) {
+  const pending = premiereRequests.get(message.id);
+  if (!pending) return;
+
+  premiereRequests.delete(message.id);
+  clearTimeout(pending.timeout);
+
+  if (message.ok) {
+    send(pending.res, 200, JSON.stringify(message), "application/json; charset=utf-8");
+    return;
+  }
+
+  send(
+    pending.res,
+    502,
+    JSON.stringify({ error: message.error || "No pude ejecutar el comando en Premiere." }),
+    "application/json; charset=utf-8"
   );
 }
 
@@ -758,6 +827,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.url.startsWith("/premiere/status")) {
+    premiereStatus(res);
+    return;
+  }
+
+  if (req.url.startsWith("/premiere/play")) {
+    sendPremiereCommand(req, res);
+    return;
+  }
+
   if (req.url.startsWith("/vmix")) {
     if (BRIDGE_SECRET) {
       proxyVmixViaBridge(req, res);
@@ -878,9 +957,38 @@ rtcWss.on("connection", (socket, req) => {
   });
 });
 
+const premiereWss = new WebSocket.Server({ noServer: true });
+
+premiereWss.on("connection", (socket, req) => {
+  const premiereUrl = new URL(req.url, `http://${req.headers.host}`);
+  const token = premiereUrl.searchParams.get("token") || "";
+
+  if (!BRIDGE_SECRET || token !== BRIDGE_SECRET) {
+    socket.close(1008, "Token invalido");
+    return;
+  }
+
+  premiereClients.add(socket);
+
+  socket.on("message", (data) => {
+    let message;
+    try {
+      message = JSON.parse(data.toString("utf8"));
+    } catch {
+      return;
+    }
+
+    if (message.type === "premiere-response") completePremiereRequest(message);
+  });
+
+  socket.on("close", () => {
+    premiereClients.delete(socket);
+  });
+});
+
 server.on("upgrade", (req, socket, head) => {
   const pathname = new URL(req.url, `http://${req.headers.host}`).pathname;
-  const target = pathname === "/bridge" ? wss : pathname === "/rtc" ? rtcWss : null;
+  const target = pathname === "/bridge" ? wss : pathname === "/rtc" ? rtcWss : pathname === "/premiere" ? premiereWss : null;
 
   if (!target) {
     socket.destroy();

@@ -167,20 +167,16 @@ $premiere = Get-Process | Where-Object {
   $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -match 'Premiere Pro' -or $_.ProcessName -match 'Adobe Premiere')
 } | Select-Object -First 1
 if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
-$previous = [TeleFederalNativeWindow]::GetForegroundWindow()
 $shell = New-Object -ComObject WScript.Shell
 $shell.AppActivate($premiere.Id) | Out-Null
 Focus-Premiere $premiere.MainWindowHandle
 Start-Sleep -Milliseconds 750
 $foregroundOk = Test-ForegroundPremiere $premiere.MainWindowHandle
 Send-ShiftKey 0x33 0x04
-Start-Sleep -Milliseconds 260
-${isStop ? "Send-KeyInput 0x4B" : "Send-KeyInput 0x4B; Start-Sleep -Milliseconds 160; Send-KeyInput 0x4C"}
-Start-Sleep -Milliseconds 180
-if ($previous -ne [IntPtr]::Zero -and $previous -ne $premiere.MainWindowHandle) {
-  [TeleFederalNativeWindow]::SetForegroundWindow($previous) | Out-Null
-}
-'Premiere ${isStop ? "Stop" : "Play"} enviado por helper reforzado. ForegroundPremiere=' + $foregroundOk + '. Ventana=' + $premiere.MainWindowTitle
+Start-Sleep -Milliseconds 350
+${isStop ? "Send-KeyLegacy 0x4B 0x25" : "Send-KeyLegacy 0x4B 0x25; Start-Sleep -Milliseconds 250; Send-KeyLegacy 0x4C 0x26"}
+Start-Sleep -Milliseconds 600
+'Premiere ${isStop ? "Stop" : "Play"} enviado por helper limpio. ForegroundPremiere=' + $foregroundOk + '. Ventana=' + $premiere.MainWindowTitle
 `;
 }
 

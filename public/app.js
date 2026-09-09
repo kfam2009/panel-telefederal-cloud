@@ -1138,11 +1138,6 @@ async function callVmix(params = {}) {
 }
 
 async function callPremiere(action = "play") {
-  if (action === "play" || action === "stop") {
-    window.location.href = `telefederal-premiere://${action}`;
-    return { message: `Premiere ${action === "stop" ? "Stop" : "Play"} enviado por protocolo local.` };
-  }
-
   const response = await fetch(`/premiere/${encodeURIComponent(action)}`, {
     method: "POST",
     cache: "no-store"
@@ -2916,6 +2911,14 @@ document.addEventListener("click", async (event) => {
   if (projectTab) { state.userSelectedProject = true; setActiveProject(projectTab.dataset.projectTab); return; }
   const panelTab = event.target.closest("[data-panel-tab]");
   if (panelTab) { setActivePanel(panelTab.dataset.panelTab); return; }
+  const premierePanel = event.target.closest("[data-premiere-panel]");
+  if (premierePanel) {
+    premierePanel.disabled = true;
+    try { await runPremierePanelAction(premierePanel.dataset.premierePanel); }
+    catch (error) { setLog(error.message); }
+    finally { premierePanel.disabled = false; }
+    return;
+  }
   const quickAction = event.target.closest("[data-quick-action]");
   if (quickAction) {
     quickAction.disabled = true;

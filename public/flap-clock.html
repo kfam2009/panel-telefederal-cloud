@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <style>
+      html, body {
+        background: transparent;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        width: 100%;
+      }
+      .clock {
+        align-items: center;
+        display: grid;
+        grid-template-columns: 160px 210px;
+        height: 70px;
+        position: absolute;
+        right: 4px;
+        top: 18px;
+        width: 370px;
+      }
+      .time, .temp {
+        align-items: center;
+        color: #fff;
+        display: flex;
+        font: 900 38px Arial, sans-serif;
+        height: 70px;
+        justify-content: center;
+        text-shadow: 1px 2px 4px rgba(0, 0, 0, .55);
+      }
+      .time { background: rgba(42, 99, 238, .94); }
+      .temp { background: rgba(151, 174, 242, .94); justify-content: flex-end; padding-right: 34px; }
+    </style>
+  </head>
+  <body>
+    <div class="clock">
+      <div class="time" id="time">--:--</div>
+      <div class="temp"><span id="weather-icon">●</span> <span id="temp">-- °C</span></div>
+    </div>
+    <script>
+      const timeEl = document.querySelector("#time");
+      const tempEl = document.querySelector("#temp");
+
+      function updateTime() {
+        timeEl.textContent = new Intl.DateTimeFormat("es-AR", {
+          timeZone: "America/Argentina/Buenos_Aires",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        }).format(new Date());
+      }
+
+      async function updateTemp() {
+        try {
+          const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=-38.7196&longitude=-62.2724&current=temperature_2m,weather_code&timezone=America%2FArgentina%2FBuenos_Aires", { cache: "no-store" });
+          const data = await res.json();
+          tempEl.textContent = `${Math.round(Number(data.current.temperature_2m))} °C`;
+          const code = Number(data.current.weather_code);
+          document.getElementById("weather-icon").textContent =
+            code === 0 ? "☀" :
+            code === 1 || code === 2 ? "⛅" :
+            code === 3 || code === 45 || code === 48 ? "☁" :
+            (code >= 51 && code <= 67) || (code >= 80 && code <= 82) ? "☂" :
+            code >= 71 && code <= 77 ? "❄" :
+            code >= 95 ? "⚡" : "●";
+        } catch {
+          tempEl.textContent = "-- °C";
+        }
+      }
+
+      updateTime();
+      updateTemp();
+      setInterval(updateTime, 1000);
+      setInterval(updateTemp, 180000);
+    </script>
+  </body>
+</html>

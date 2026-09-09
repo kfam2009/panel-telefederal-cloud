@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PANEL TELEFEDERAL</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/panel-config.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-title">
+          <img src="/assets/panelgo-logo.png" alt="PanelGo">
+          <h1>PANEL TELEFEDERAL</h1>
+        </div>
+        <nav class="project-tabs" aria-label="Proyecto"><button type="button" class="project-tab is-active" data-project-tab="telefederal">TELEFEDERAL</button></nav>
+        <div class="topbar-right">
+          <div class="master-meter" id="masterMeter" aria-label="Vumetro master">
+            <span class="meter-title">MASTER</span>
+            <div class="meter-bars">
+              <label><b>L</b><i id="masterMeterL"><em id="masterPeakL"></em></i><strong id="masterDbL">-inf</strong></label>
+              <label><b>R</b><i id="masterMeterR"><em id="masterPeakR"></em></i><strong id="masterDbR">-inf</strong></label>
+              <div class="meter-scale" aria-hidden="true">
+                <span>-60</span><span>-30</span><span>-12</span><span>-6</span><span>0</span>
+              </div>
+            </div>
+          </div>
+          <div class="status-pill" id="connectionStatus">Conectando...</div>
+        </div>
+      </header>
+
+      <nav class="panel-tabs" aria-label="Controles del panel">
+        <button type="button" class="panel-tab is-active" data-panel-tab="multiview">Multiview</button>
+        <button type="button" class="panel-tab" data-panel-tab="zocalos">Zocalos</button>
+        <button type="button" class="panel-tab" data-panel-tab="ptz">PTZ</button>
+        <button type="button" class="panel-tab" data-panel-tab="audio">Audio</button>
+        <button type="button" class="panel-tab" data-panel-tab="publicidades" hidden>Publicidades</button>
+      </nav>
+      <section class="quick-actions" id="quickActions" aria-label="Acciones rapidas del proyecto" hidden></section>
+
+      <section class="workspace" data-panel="multiview" aria-label="Control de multiview">
+        <div class="workspace-head">
+          <div>
+            <p class="eyebrow">Formatos</p>
+            <h2 id="projectTitle">TELEFEDERAL</h2>
+          </div>
+          <p class="help" id="projectHelp">Multiviews de TeleFederal. El video queda fijo y Zowitek se puede usar como fuente alternativa.</p>
+        </div>
+
+        <div class="operator-grid">
+          <section class="format-panel" aria-label="Formatos">
+            <div class="panel-heading">
+              <p class="eyebrow">Elegir formato</p>
+            </div>
+            <div class="format-grid" id="formatGrid" data-format-grid></div>
+          </section>
+
+          <section class="editor" aria-live="polite">
+            <div class="editor-head">
+              <div>
+                <p class="eyebrow">Edicion</p>
+                <h2 id="editorTitle">Elegir formato</h2>
+              </div>
+              <span class="selection-state" id="editorState">-</span>
+            </div>
+            <div class="camera-grid" id="cameraGrid"></div>
+            <button type="button" class="editor-air-button" id="editorAirButton">Mandar este formato al aire</button>
+          </section>
+
+          <section class="monitor-stack" aria-label="Monitores">
+            <article class="monitor preview-monitor">
+              <div class="monitor-label">Preview <span id="previewName">-</span></div>
+              <img id="previewImage" alt="Vista previa de vMix">
+            </article>
+            <article class="monitor program-monitor">
+              <div class="monitor-label">Aire <span id="programName">-</span></div>
+              <img id="programImage" alt="Vista al aire de vMix">
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <section class="workspace ptz-workspace" data-panel="ptz" aria-label="Control PTZ" hidden>
+        <div class="workspace-head">
+          <div>
+            <p class="eyebrow">Camaras roboticas</p>
+            <h2>PTZ</h2>
+          </div>
+          <p class="help" id="ptzSelectedName">Elegir PTZ</p>
+        </div>
+        <div class="ptz-operator-grid">
+          <section class="format-panel side-format-panel" aria-label="Multiview rapido PTZ">
+            <div class="panel-heading">
+              <p class="eyebrow">Multiview</p>
+            </div>
+            <div class="format-grid" data-format-grid></div>
+          </section>
+
+          <section class="ptz-panel">
+            <div class="ptz-switcher" id="ptzSwitcher"></div>
+            <div class="ptz-controls" id="ptzControls"></div>
+            <div class="ptz-action-row">
+              <button type="button" class="ptz-preview-button" id="ptzPreviewButton">Mandar PTZ al previo</button>
+              <button type="button" class="editor-air-button ptz-air-button" id="ptzAirButton">Mandar PTZ al aire</button>
+            </div>
+          </section>
+
+          <section class="monitor-stack ptz-monitor-stack" aria-label="Monitores PTZ">
+            <article class="monitor preview-monitor">
+              <div class="monitor-label">Preview <span id="ptzPreviewName">-</span></div>
+              <img id="ptzPreviewImage" alt="Vista previa de vMix">
+            </article>
+            <article class="monitor program-monitor">
+              <div class="monitor-label">Aire <span id="ptzProgramName">-</span></div>
+              <img id="ptzProgramImage" alt="Vista al aire de vMix">
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <section class="workspace audio-workspace" data-panel="audio" aria-label="Control de audio" hidden>
+        <div class="workspace-head">
+          <div>
+            <p class="eyebrow">Mixer</p>
+            <h2>Audio</h2>
+          </div>
+          <p class="help">Volumen, mute y niveles de los canales con audio del proyecto.</p>
+        </div>
+        <div class="audio-operator-grid">
+          <section class="format-panel side-format-panel" aria-label="Multiview rapido audio">
+            <div class="panel-heading">
+              <p class="eyebrow">Multiview</p>
+            </div>
+            <div class="format-grid" data-format-grid></div>
+          </section>
+          <section class="audio-board" id="audioBoard" aria-label="Canales de audio"></section>
+        </div>
+      </section>
+
+      <section class="workspace zocalos-workspace" data-panel="zocalos" aria-label="Control de zocalos" hidden>
+        <div class="workspace-head">
+          <div>
+            <p class="eyebrow">Proyecto actual</p>
+            <h2>Zocalos</h2>
+          </div>
+          <p class="help">Buscar, preparar y mandar zocalos de uno o dos renglones.</p>
+        </div>
+
+        <div class="zocalos-grid">
+          <section class="format-panel side-format-panel" aria-label="Multiview rapido zocalos">
+            <div class="panel-heading">
+              <p class="eyebrow">Multiview</p>
+            </div>
+            <div class="format-grid" data-format-grid></div>
+          </section>
+          <nav class="zocalo-subtabs" id="zocaloSubtabs" aria-label="Seleccion de zocalo"></nav>
+          <section class="zocalo-board" id="zocaloBoard" aria-label="Zocalos armados"></section>
+
+          <section class="monitor-stack zocalo-monitor-stack" aria-label="Monitores zocalos">
+            <article class="monitor preview-monitor">
+              <div class="monitor-label">Preview <span id="zocaloPreviewName">-</span></div>
+              <img id="zocaloPreviewImage" alt="Vista previa de vMix">
+            </article>
+            <article class="monitor program-monitor">
+              <div class="monitor-label">Aire <span id="zocaloProgramName">-</span></div>
+              <img id="zocaloProgramImage" alt="Vista al aire de vMix">
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <section class="workspace publicidades-workspace" data-panel="publicidades" aria-label="Control de publicidades" hidden>
+        <div class="workspace-head">
+          <div>
+            <p class="eyebrow">TELEFEDERAL</p>
+            <h2>Publicidades</h2>
+          </div>
+          <p class="help">Botones leidos del UTC, separados en las tres columnas originales.</p>
+        </div>
+
+        <div class="publicidades-grid">
+          <section class="publicidades-board" id="publicidadesBoard" aria-label="Publicidades TeleFederal"></section>
+
+          <section class="monitor-stack publicidades-monitor-stack" aria-label="Monitores publicidades">
+            <article class="monitor preview-monitor">
+              <div class="monitor-label">Preview <span id="publicidadesPreviewName">-</span></div>
+              <img id="publicidadesPreviewImage" alt="Vista previa de vMix">
+            </article>
+            <article class="monitor program-monitor">
+              <div class="monitor-label">Aire <span id="publicidadesProgramName">-</span></div>
+              <img id="publicidadesProgramImage" alt="Vista al aire de vMix">
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <footer class="log-line" id="logLine">Listo para conectar con vMix.</footer>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
+

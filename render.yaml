@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: panel-telefederal
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: BRIDGE_SECRET
+        generateValue: true
+      - key: LOCAL_MONITOR_BASE
+        value: http://127.0.0.1:3005

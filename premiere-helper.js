@@ -175,11 +175,7 @@ Start-Sleep -Milliseconds 750
 $foregroundOk = Test-ForegroundPremiere $premiere.MainWindowHandle
 Send-ShiftKey 0x33 0x04
 Start-Sleep -Milliseconds 260
-Send-PostKey $premiere.MainWindowHandle 0x20 0x39
-Start-Sleep -Milliseconds 120
-Send-KeyInput 0x20
-Start-Sleep -Milliseconds 120
-${isStop ? "Send-KeyInput 0x4B; Start-Sleep -Milliseconds 120; Send-KeyLegacy 0x4B 0x25" : "Send-KeyInput 0x4B; Start-Sleep -Milliseconds 120; Send-KeyInput 0x4C; Start-Sleep -Milliseconds 120; Send-KeyLegacy 0x4C 0x26"}
+${isStop ? "Send-KeyInput 0x4B" : "Send-KeyInput 0x4B; Start-Sleep -Milliseconds 160; Send-KeyInput 0x4C"}
 Start-Sleep -Milliseconds 180
 if ($previous -ne [IntPtr]::Zero -and $previous -ne $premiere.MainWindowHandle) {
   [TeleFederalNativeWindow]::SetForegroundWindow($previous) | Out-Null

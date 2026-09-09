@@ -632,6 +632,8 @@ const state = {
 const rtcMonitors = {
   enabled: false,
   started: false,
+  fallback: false,
+  fallbackTimer: null,
   socket: null,
   pc: null,
   viewerId: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -2197,13 +2199,42 @@ function setRtcStreams(previewStream, programStream) {
   });
 }
 
+function useMonitorImages(useImages) {
+  Object.values(rtcMonitors.videos).forEach((video) => {
+    video.hidden = useImages;
+    if (useImages) video.srcObject = null;
+  });
+  [
+    els.previewImage,
+    els.programImage,
+    els.ptzPreviewImage,
+    els.ptzProgramImage,
+    els.zocaloPreviewImage,
+    els.zocaloProgramImage,
+    els.publicidadesPreviewImage,
+    els.publicidadesProgramImage
+  ].forEach((image) => {
+    if (image) image.hidden = !useImages;
+  });
+}
+
+function activateMonitorFallback() {
+  rtcMonitors.fallback = true;
+  rtcMonitors.enabled = false;
+  useMonitorImages(true);
+  renderMonitors();
+}
+
 function startRtcMonitors() {
   if (rtcMonitors.started || window.PANEL_CONFIG?.monitorMode !== "webrtc") return;
   rtcMonitors.started = true;
   rtcMonitors.enabled = true;
+  rtcMonitors.fallback = false;
   ensureRtcVideos();
+  useMonitorImages(false);
 
   const connect = () => {
+    if (rtcMonitors.fallbackTimer) clearTimeout(rtcMonitors.fallbackTimer);
     const socket = new WebSocket(rtcUrl());
     rtcMonitors.socket = socket;
     rtcMonitors.streamMap = {};
@@ -2216,6 +2247,8 @@ function startRtcMonitors() {
       const stream = event.streams[0] || new MediaStream([event.track]);
       if (name === "preview") rtcMonitors.previewStream = stream;
       if (name === "program") rtcMonitors.programStream = stream;
+      rtcMonitors.fallback = false;
+      useMonitorImages(false);
       setRtcStreams(rtcMonitors.previewStream, rtcMonitors.programStream);
     };
     pc.onicecandidate = (event) => {
@@ -2225,13 +2258,20 @@ function startRtcMonitors() {
     };
     pc.onconnectionstatechange = () => {
       if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
-        rtcMonitors.enabled = false;
+        activateMonitorFallback();
       } else if (pc.connectionState === "connected") {
         rtcMonitors.enabled = true;
+        rtcMonitors.fallback = false;
+        useMonitorImages(false);
       }
     };
 
-    socket.addEventListener("open", () => socket.send(JSON.stringify({ type: "viewer-ready" })));
+    socket.addEventListener("open", () => {
+      socket.send(JSON.stringify({ type: "viewer-ready" }));
+      rtcMonitors.fallbackTimer = setTimeout(() => {
+        if (!rtcMonitors.previewStream || !rtcMonitors.programStream) activateMonitorFallback();
+      }, 7000);
+    });
     socket.addEventListener("message", async (event) => {
       let message;
       try {
@@ -2255,13 +2295,17 @@ function startRtcMonitors() {
       }
 
       if (message.type === "publisher-offline") {
-        rtcMonitors.enabled = false;
+        activateMonitorFallback();
       }
     });
     socket.addEventListener("close", () => {
       pc.close();
-      rtcMonitors.enabled = false;
-      setTimeout(connect, 2500);
+      activateMonitorFallback();
+      setTimeout(() => {
+        rtcMonitors.fallback = false;
+        useMonitorImages(false);
+        connect();
+      }, 2500);
     });
   };
 
@@ -2284,7 +2328,7 @@ function renderMonitors() {
     publicidades: [els.publicidadesPreviewImage, els.publicidadesProgramImage]
   };
   const activePair = monitorPairs[state.activePanel] || monitorPairs.multiview;
-  if (rtcMonitors.started) {
+  if (rtcMonitors.started && !rtcMonitors.fallback) {
     Object.values(monitorPairs).forEach(([previewImage, programImage]) => {
       [previewImage, programImage].forEach((image) => {
         if (!image) return;

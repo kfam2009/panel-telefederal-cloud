@@ -11,7 +11,6 @@ const VMIX_HOST = process.env.VMIX_HOST || "127.0.0.1";
 const VMIX_PORT = Number(process.env.VMIX_PORT || 8088);
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET || "";
 const PANEL_ACCESS_PIN = process.env.PANEL_ACCESS_PIN || BRIDGE_SECRET;
-const PANEL_AUTH_CONFIGURED = Boolean(PANEL_ACCESS_PIN);
 const PANEL_SESSION_COOKIE = "tf_panel_session";
 const LOCAL_MONITOR_BASE = process.env.LOCAL_MONITOR_BASE || "http://127.0.0.1:3005";
 const IS_REMOTE_VMIX = !["127.0.0.1", "localhost", "::1"].includes(VMIX_HOST.toLowerCase());
@@ -97,38 +96,10 @@ function cookieValue(req, name) {
 }
 
 function isPanelAuthenticated(req) {
-  if (!PANEL_AUTH_CONFIGURED) return false;
+  if (!PANEL_ACCESS_PIN) return true;
   const expected = signPanelSession();
   const actual = cookieValue(req, PANEL_SESSION_COOKIE);
   return actual.length === expected.length && crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
-}
-
-function serveAuthNotConfigured(res) {
-  send(
-    res,
-    503,
-    `<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TELEFEDERAL - Acceso no configurado</title>
-    <style>
-      body { align-items: center; background: #0d1016; color: #f5f7fb; display: grid; font-family: Arial, Helvetica, sans-serif; min-height: 100vh; margin: 0; padding: 24px; }
-      main { background: #171b23; border: 1px solid #394152; max-width: 460px; padding: 22px; }
-      h1 { font-size: 1.1rem; margin: 0 0 10px; }
-      p { color: #aeb7c6; line-height: 1.4; margin: 0; }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>PANEL TELEFEDERAL</h1>
-      <p>El acceso cloud esta cerrado. Falta configurar PANEL_ACCESS_PIN o BRIDGE_SECRET en Render.</p>
-    </main>
-  </body>
-</html>`,
-    "text/html; charset=utf-8"
-  );
 }
 
 function serveLogin(res, failed = false) {
@@ -167,11 +138,6 @@ function serveLogin(res, failed = false) {
 }
 
 function handleLogin(req, res) {
-  if (!PANEL_AUTH_CONFIGURED) {
-    serveAuthNotConfigured(res);
-    return;
-  }
-
   if (req.method === "GET") {
     serveLogin(res);
     return;
@@ -210,12 +176,7 @@ function handleLogin(req, res) {
 }
 
 function requirePanelAccess(req, res, localRequest) {
-  if (localRequest) return true;
-  if (!PANEL_AUTH_CONFIGURED) {
-    serveAuthNotConfigured(res);
-    return false;
-  }
-  if (isPanelAuthenticated(req)) return true;
+  if (localRequest || isPanelAuthenticated(req)) return true;
   if (req.method === "GET") {
     res.writeHead(302, { Location: "/login", "Cache-Control": "no-store" });
     res.end();

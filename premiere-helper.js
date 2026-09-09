@@ -55,8 +55,10 @@ function shortcutScript(action) {
 $ErrorActionPreference = 'Stop'
 Add-Type @"
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 public class TeleFederalNativeWindow {
+  public delegate bool EnumWindowProc(IntPtr hWnd, IntPtr lParam);
   [StructLayout(LayoutKind.Sequential)]
   public struct INPUT {
     public UInt32 type;
@@ -70,6 +72,8 @@ public class TeleFederalNativeWindow {
     public UInt32 time;
     public IntPtr dwExtraInfo;
   }
+  [DllImport("user32.dll")]
+  public static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowProc lpEnumFunc, IntPtr lParam);
   [DllImport("user32.dll")]
   public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")]
@@ -140,20 +144,30 @@ function Send-PostKey([IntPtr]$hWnd, [int]$vk, [int]$scan) {
   [TeleFederalNativeWindow]::PostMessage($hWnd, $wmKeyUp, [IntPtr]$vk, $up) | Out-Null
 }
 
-function Focus-Premiere([IntPtr]$hWnd) {
-  [uint32]$targetPid = 0
-  $targetThread = [TeleFederalNativeWindow]::GetWindowThreadProcessId($hWnd, [ref]$targetPid)
-  $currentThread = [TeleFederalNativeWindow]::GetCurrentThreadId()
-  [TeleFederalNativeWindow]::AttachThreadInput($currentThread, $targetThread, $true) | Out-Null
-  try {
-    [TeleFederalNativeWindow]::ShowWindow($hWnd, 3) | Out-Null
-    [TeleFederalNativeWindow]::BringWindowToTop($hWnd) | Out-Null
-    [TeleFederalNativeWindow]::SetActiveWindow($hWnd) | Out-Null
-    [TeleFederalNativeWindow]::SetFocus($hWnd) | Out-Null
-    [TeleFederalNativeWindow]::SetForegroundWindow($hWnd) | Out-Null
-  } finally {
-    [TeleFederalNativeWindow]::AttachThreadInput($currentThread, $targetThread, $false) | Out-Null
+function Send-PostKeyBatch($targets, [int]$vk, [int]$scan) {
+  $wmKeyDown = 0x0100
+  $wmKeyUp = 0x0101
+  $down = [IntPtr](1 -bor ($scan -shl 16))
+  $up = [IntPtr](1 -bor ($scan -shl 16) -bor (0xC0 -shl 24))
+  foreach ($target in $targets) {
+    [TeleFederalNativeWindow]::PostMessage($target, $wmKeyDown, [IntPtr]$vk, $down) | Out-Null
   }
+  Start-Sleep -Milliseconds 70
+  foreach ($target in $targets) {
+    [TeleFederalNativeWindow]::PostMessage($target, $wmKeyUp, [IntPtr]$vk, $up) | Out-Null
+  }
+}
+
+function Get-PremiereTargets([IntPtr]$mainWindow) {
+  $targets = New-Object 'System.Collections.Generic.List[IntPtr]'
+  $targets.Add($mainWindow)
+  $callback = [TeleFederalNativeWindow+EnumWindowProc]{
+    param([IntPtr]$hWnd, [IntPtr]$lParam)
+    $targets.Add($hWnd)
+    return $true
+  }
+  [TeleFederalNativeWindow]::EnumChildWindows($mainWindow, $callback, [IntPtr]::Zero) | Out-Null
+  return $targets
 }
 
 function Test-ForegroundPremiere([IntPtr]$hWnd) {
@@ -167,16 +181,13 @@ $premiere = Get-Process | Where-Object {
   $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -match 'Premiere Pro' -or $_.ProcessName -match 'Adobe Premiere')
 } | Select-Object -First 1
 if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
-$shell = New-Object -ComObject WScript.Shell
-$shell.AppActivate($premiere.Id) | Out-Null
-Focus-Premiere $premiere.MainWindowHandle
-Start-Sleep -Milliseconds 750
 $foregroundOk = Test-ForegroundPremiere $premiere.MainWindowHandle
-Send-ShiftKey 0x33 0x04
-Start-Sleep -Milliseconds 350
-${isStop ? "Send-KeyInput 0x4B; Start-Sleep -Milliseconds 120; Send-KeyLegacy 0x4B 0x25; Start-Sleep -Milliseconds 120; Send-PostKey $premiere.MainWindowHandle 0x4B 0x25" : "Send-KeyInput 0x4B; Start-Sleep -Milliseconds 150; Send-KeyLegacy 0x4B 0x25; Start-Sleep -Milliseconds 250; Send-KeyLegacy 0x4C 0x26"}
-Start-Sleep -Milliseconds 600
-'Premiere ${isStop ? "Stop" : "Play"} enviado por helper limpio. ForegroundPremiere=' + $foregroundOk + '. Ventana=' + $premiere.MainWindowTitle
+$targets = Get-PremiereTargets $premiere.MainWindowHandle
+Send-PostKeyBatch $targets 0x4B 0x25
+Start-Sleep -Milliseconds 180
+${isStop ? "Send-PostKeyBatch $targets 0x4B 0x25" : "Send-PostKeyBatch $targets 0x4C 0x26"}
+Start-Sleep -Milliseconds 250
+'Premiere ${isStop ? "Stop" : "Play"} enviado sin foco a ' + $targets.Count + ' ventanas. ForegroundPremiere=' + $foregroundOk + '. Ventana=' + $premiere.MainWindowTitle
 `;
 }
 

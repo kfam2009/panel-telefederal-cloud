@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Publicador WebRTC TELEFEDERAL</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body class="publisher-page">
+    <main class="publisher-shell">
+      <header class="publisher-header">
+        <h1>Publicador WebRTC TELEFEDERAL</h1>
+        <div class="status-pill" id="publisherStatus">Conectando...</div>
+      </header>
+      <section class="publisher-grid">
+        <article class="monitor preview-monitor">
+          <div class="monitor-label">Preview <span id="previewStats">-</span></div>
+          <img id="previewSource" src="/monitor/preview.mjpg" alt="Preview local">
+          <canvas id="previewCanvas" width="640" height="360"></canvas>
+        </article>
+        <article class="monitor program-monitor">
+          <div class="monitor-label">Aire <span id="programStats">-</span></div>
+          <img id="programSource" src="/monitor/program.mjpg" alt="Aire local">
+          <canvas id="programCanvas" width="640" height="360"></canvas>
+        </article>
+      </section>
+      <footer class="log-line" id="publisherLog">Listo para publicar.</footer>
+    </main>
+    <script src="/publisher.js"></script>
+  </body>
+</html>

@@ -52,7 +52,7 @@ h2 { font-size: 1.1rem; }
 .preview-monitor .monitor-label { background: rgba(19,93,81,.42); color: #c9fff2; }
 .program-monitor .monitor-label { background: rgba(143,36,36,.44); color: #ffd6d6; }
 .monitor-label span { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.monitor img { background: #000; display: block; height: 100%; min-height: 0; object-fit: contain; width: 100%; }
+.monitor img, .monitor-video { background: #000; display: block; height: 100%; min-height: 0; object-fit: contain; width: 100%; }
 .preview-monitor img, .program-monitor img { max-height: none; }
 
 .project-tabs, .panel-tabs { display: flex; gap: 8px; margin: 0 0 8px; }

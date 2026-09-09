@@ -34,6 +34,8 @@ const monitorStreams = new Map();
 const bridgeClients = new Set();
 const bridgeRequests = new Map();
 const bridgeMonitorStreams = new Map();
+const rtcViewers = new Map();
+let rtcPublisher = null;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -98,10 +100,20 @@ function serveStatic(req, res) {
 }
 
 function servePanelConfig(res) {
+  const iceServers = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" }
+  ];
+
   send(
     res,
     200,
-    `window.PANEL_CONFIG = ${JSON.stringify({ monitorBase: BRIDGE_SECRET ? "" : LOCAL_MONITOR_BASE })};`,
+    `window.PANEL_CONFIG = ${JSON.stringify({
+      monitorBase: BRIDGE_SECRET ? "" : LOCAL_MONITOR_BASE,
+      monitorMode: BRIDGE_SECRET ? "webrtc" : "mjpg",
+      rtcPath: "/rtc",
+      iceServers
+    })};`,
     "text/javascript; charset=utf-8"
   );
 }
@@ -793,6 +805,77 @@ wss.on("connection", (socket, req) => {
       if (!res.destroyed) res.end();
     });
     bridgeMonitorStreams.clear();
+  });
+});
+
+const rtcWss = new WebSocket.Server({ server, path: "/rtc" });
+
+function sendSocket(socket, message) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(message));
+  }
+}
+
+function forwardToPublisher(message) {
+  sendSocket(rtcPublisher, message);
+}
+
+function forwardToViewer(viewerId, message) {
+  sendSocket(rtcViewers.get(viewerId), message);
+}
+
+rtcWss.on("connection", (socket, req) => {
+  const rtcUrl = new URL(req.url, `http://${req.headers.host}`);
+  const role = rtcUrl.searchParams.get("role") || "viewer";
+  const token = rtcUrl.searchParams.get("token") || "";
+  const viewerId = rtcUrl.searchParams.get("viewerId") || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  if (role === "publisher") {
+    if (!BRIDGE_SECRET || token !== BRIDGE_SECRET) {
+      socket.close(1008, "Token invalido");
+      return;
+    }
+
+    if (rtcPublisher && rtcPublisher.readyState === WebSocket.OPEN) {
+      rtcPublisher.close(1012, "Publisher reemplazado");
+    }
+
+    rtcPublisher = socket;
+    sendSocket(socket, { type: "publisher-ready" });
+    rtcViewers.forEach((_, id) => sendSocket(socket, { type: "viewer-ready", viewerId: id }));
+  } else {
+    rtcViewers.set(viewerId, socket);
+    sendSocket(socket, { type: "viewer-id", viewerId, hasPublisher: !!rtcPublisher });
+    forwardToPublisher({ type: "viewer-ready", viewerId });
+  }
+
+  socket.on("message", (data) => {
+    let message;
+    try {
+      message = JSON.parse(data.toString("utf8"));
+    } catch {
+      return;
+    }
+
+    if (role === "publisher") {
+      forwardToViewer(message.viewerId, message);
+      return;
+    }
+
+    forwardToPublisher({ ...message, viewerId });
+  });
+
+  socket.on("close", () => {
+    if (role === "publisher" && rtcPublisher === socket) {
+      rtcPublisher = null;
+      rtcViewers.forEach((viewer) => sendSocket(viewer, { type: "publisher-offline" }));
+      return;
+    }
+
+    if (role !== "publisher") {
+      rtcViewers.delete(viewerId);
+      forwardToPublisher({ type: "viewer-left", viewerId });
+    }
   });
 });
 

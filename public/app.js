@@ -629,6 +629,15 @@ const state = {
   zocaloOverlaySlots: {},
   overlayWatchers: {}
 };
+const rtcMonitors = {
+  enabled: false,
+  started: false,
+  socket: null,
+  pc: null,
+  viewerId: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  streamMap: {},
+  videos: {}
+};
 const els = {
   status: document.querySelector("#connectionStatus"),
   masterMeterL: document.querySelector("#masterMeterL"),
@@ -2144,7 +2153,122 @@ function monitorUrl(path) {
   return `${base}${path}?v=${Date.now()}`;
 }
 
+function rtcUrl() {
+  const url = new URL(window.PANEL_CONFIG?.rtcPath || "/rtc", window.location.href);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.search = `?role=viewer&viewerId=${encodeURIComponent(rtcMonitors.viewerId)}`;
+  return url.toString();
+}
+
+function createMonitorVideo(image, name) {
+  const video = document.createElement("video");
+  video.className = "monitor-video";
+  video.autoplay = true;
+  video.muted = true;
+  video.playsInline = true;
+  video.dataset.monitorStream = name;
+  image.insertAdjacentElement("afterend", video);
+  image.hidden = true;
+  return video;
+}
+
+function ensureRtcVideos() {
+  const pairs = [
+    [els.previewImage, "preview"],
+    [els.programImage, "program"],
+    [els.ptzPreviewImage, "preview"],
+    [els.ptzProgramImage, "program"],
+    [els.zocaloPreviewImage, "preview"],
+    [els.zocaloProgramImage, "program"],
+    [els.publicidadesPreviewImage, "preview"],
+    [els.publicidadesProgramImage, "program"]
+  ];
+
+  pairs.forEach(([image, name]) => {
+    if (!image || rtcMonitors.videos[image.id]) return;
+    rtcMonitors.videos[image.id] = createMonitorVideo(image, name);
+  });
+}
+
+function setRtcStreams(previewStream, programStream) {
+  Object.values(rtcMonitors.videos).forEach((video) => {
+    video.srcObject = video.dataset.monitorStream === "preview" ? previewStream : programStream;
+  });
+}
+
+function startRtcMonitors() {
+  if (rtcMonitors.started || window.PANEL_CONFIG?.monitorMode !== "webrtc") return;
+  rtcMonitors.started = true;
+  rtcMonitors.enabled = true;
+  ensureRtcVideos();
+
+  const connect = () => {
+    const socket = new WebSocket(rtcUrl());
+    rtcMonitors.socket = socket;
+    rtcMonitors.streamMap = {};
+
+    const pc = new RTCPeerConnection({ iceServers: window.PANEL_CONFIG?.iceServers || [] });
+    rtcMonitors.pc = pc;
+
+    pc.ontrack = (event) => {
+      const name = rtcMonitors.streamMap[event.transceiver?.mid] || (Object.keys(rtcMonitors.streamMap).length ? "program" : "preview");
+      const stream = event.streams[0] || new MediaStream([event.track]);
+      if (name === "preview") rtcMonitors.previewStream = stream;
+      if (name === "program") rtcMonitors.programStream = stream;
+      setRtcStreams(rtcMonitors.previewStream, rtcMonitors.programStream);
+    };
+    pc.onicecandidate = (event) => {
+      if (event.candidate && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "ice-candidate", candidate: event.candidate }));
+      }
+    };
+    pc.onconnectionstatechange = () => {
+      if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+        rtcMonitors.enabled = false;
+      } else if (pc.connectionState === "connected") {
+        rtcMonitors.enabled = true;
+      }
+    };
+
+    socket.addEventListener("open", () => socket.send(JSON.stringify({ type: "viewer-ready" })));
+    socket.addEventListener("message", async (event) => {
+      let message;
+      try {
+        message = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      if (message.type === "publisher-offer") {
+        rtcMonitors.streamMap = Object.fromEntries((message.streams || []).map((item) => [item.mid, item.name]));
+        await pc.setRemoteDescription(message.offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.send(JSON.stringify({ type: "viewer-answer", answer }));
+        return;
+      }
+
+      if (message.type === "ice-candidate") {
+        await pc.addIceCandidate(message.candidate).catch(() => {});
+        return;
+      }
+
+      if (message.type === "publisher-offline") {
+        rtcMonitors.enabled = false;
+      }
+    });
+    socket.addEventListener("close", () => {
+      pc.close();
+      rtcMonitors.enabled = false;
+      setTimeout(connect, 2500);
+    });
+  };
+
+  connect();
+}
+
 function renderMonitors() {
+  startRtcMonitors();
   els.previewName.textContent = inputTitle(state.preview);
   els.programName.textContent = inputTitle(state.active);
   els.ptzPreviewName.textContent = inputTitle(state.preview);
@@ -2159,6 +2283,17 @@ function renderMonitors() {
     publicidades: [els.publicidadesPreviewImage, els.publicidadesProgramImage]
   };
   const activePair = monitorPairs[state.activePanel] || monitorPairs.multiview;
+  if (rtcMonitors.started) {
+    Object.values(monitorPairs).forEach(([previewImage, programImage]) => {
+      [previewImage, programImage].forEach((image) => {
+        if (!image) return;
+        image.removeAttribute("src");
+        delete image.dataset.monitorStream;
+      });
+    });
+    return;
+  }
+
   Object.values(monitorPairs).forEach(([previewImage, programImage]) => {
     if (previewImage === activePair[0] && programImage === activePair[1]) {
       if (previewImage.dataset.monitorStream !== "preview") {

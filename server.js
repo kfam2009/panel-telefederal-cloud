@@ -132,6 +132,10 @@ function servePanelConfig(req, res) {
 
 function getPremiereClient() {
   for (const socket of premiereClients) {
+    if (socket.readyState === WebSocket.OPEN && socket.premiereClientKind === "system") return socket;
+  }
+
+  for (const socket of premiereClients) {
     if (socket.readyState === WebSocket.OPEN) return socket;
   }
 
@@ -175,7 +179,7 @@ function sendPremiereCommand(req, res) {
 
   premiereRequests.set(requestId, { res, timeout });
   const requestPath = new URL(req.url, `http://${req.headers.host}`).pathname;
-  const command = requestPath.includes("stop-background") ? "stopBackground" : requestPath.includes("play-background") ? "playForwardBackground" : requestPath.includes("stop") ? "stopFocus" : requestPath.includes("play-forward") ? "playForwardFocus" : requestPath.includes("play-focus") ? "playToggleFocus" : "playToggle";
+  const command = requestPath.includes("stop") ? "stop" : "play";
   premiere.send(JSON.stringify({ type: "premiere-command", id: requestId, command }));
 }
 
@@ -982,6 +986,7 @@ premiereWss.on("connection", (socket, req) => {
     return;
   }
 
+  socket.premiereClientKind = premiereUrl.searchParams.get("client") || "cep";
   premiereClients.add(socket);
 
   socket.on("message", (data) => {

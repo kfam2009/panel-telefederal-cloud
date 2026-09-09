@@ -774,17 +774,19 @@ function getSharedMonitorStream(monitorName, device) {
 }
 
 const server = http.createServer((req, res) => {
+  const localRequest = isLocalRequest(req);
+
   if (req.url.startsWith("/panel-config.js")) {
     servePanelConfig(req, res);
     return;
   }
 
-  if (BRIDGE_SECRET && req.url.startsWith("/monitor/program.mjpg")) {
+  if (BRIDGE_SECRET && !localRequest && req.url.startsWith("/monitor/program.mjpg")) {
     streamMonitorViaBridge(req, res, "program");
     return;
   }
 
-  if (BRIDGE_SECRET && req.url.startsWith("/monitor/preview.mjpg")) {
+  if (BRIDGE_SECRET && !localRequest && req.url.startsWith("/monitor/preview.mjpg")) {
     streamMonitorViaBridge(req, res, "preview");
     return;
   }
@@ -850,7 +852,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.url.startsWith("/vmix")) {
-    if (BRIDGE_SECRET) {
+    if (BRIDGE_SECRET && !localRequest) {
       proxyVmixViaBridge(req, res);
     } else {
       proxyVmix(req, res);

@@ -101,6 +101,7 @@ function requestLocalFrame(framePath) {
 }
 
 function startMonitorStream(socket, id, streamPath) {
+  if (MONITOR_RELAY_FPS <= 0) return;
   const framePath = streamPath.replace(/\.mjpg(?:\?.*)?$/, "-frame.jpg");
   const delay = Math.max(33, Math.round(1000 / Math.max(1, MONITOR_RELAY_FPS)));
   const relay = { interval: null, inFlight: false, stopped: false };
@@ -175,4 +176,4 @@ function connect(role) {
 }
 
 connect("control");
-connect("monitor");
+if (MONITOR_RELAY_FPS > 0) connect("monitor");

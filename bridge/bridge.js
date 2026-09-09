@@ -57,14 +57,14 @@ function bridgeUrl() {
 function connect() {
   const socket = new WebSocket(bridgeUrl());
 
-  socket.on("open", () => {
+  socket.addEventListener("open", () => {
     console.log(`Bridge TELEFEDERAL conectado a ${CLOUD_URL}`);
   });
 
-  socket.on("message", async (data) => {
+  socket.addEventListener("message", async (event) => {
     let message;
     try {
-      message = JSON.parse(data.toString("utf8"));
+      message = JSON.parse(event.data.toString("utf8"));
     } catch (error) {
       return;
     }
@@ -74,13 +74,13 @@ function connect() {
     socket.send(JSON.stringify({ type: "vmix-response", id: message.id, ...result }));
   });
 
-  socket.on("close", () => {
+  socket.addEventListener("close", () => {
     console.log("Bridge desconectado. Reintentando...");
     setTimeout(connect, 2500);
   });
 
-  socket.on("error", (error) => {
-    console.error(`Bridge error: ${error.message}`);
+  socket.addEventListener("error", () => {
+    console.error("Bridge error.");
   });
 }
 

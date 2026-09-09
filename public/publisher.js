@@ -8,6 +8,7 @@ const iceServers = [
 ];
 const peers = new Map();
 const tracks = {};
+window.TF_RTC_PUBLISHER = { peers, tracks };
 const els = {
   status: document.querySelector("#publisherStatus"),
   log: document.querySelector("#publisherLog"),

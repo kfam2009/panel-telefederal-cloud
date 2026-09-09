@@ -846,7 +846,6 @@ rtcWss.on("connection", (socket, req) => {
   } else {
     rtcViewers.set(viewerId, socket);
     sendSocket(socket, { type: "viewer-id", viewerId, hasPublisher: !!rtcPublisher });
-    forwardToPublisher({ type: "viewer-ready", viewerId });
   }
 
   socket.on("message", (data) => {

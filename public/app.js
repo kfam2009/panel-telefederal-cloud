@@ -638,6 +638,7 @@ const rtcMonitors = {
   streamMap: {},
   videos: {}
 };
+window.TF_RTC = rtcMonitors;
 const els = {
   status: document.querySelector("#connectionStatus"),
   masterMeterL: document.querySelector("#masterMeterL"),

@@ -46,8 +46,12 @@ async function playToggle() {
 $ErrorActionPreference = 'Stop'
 Add-Type @"
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 public class NativeWindow {
+  public delegate bool EnumWindowProc(IntPtr hWnd, IntPtr lParam);
+  [DllImport("user32.dll")]
+  public static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowProc lpEnumFunc, IntPtr lParam);
   [DllImport("user32.dll")]
   public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 }
@@ -59,10 +63,24 @@ if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere 
 $wmKeyDown = 0x0100
 $wmKeyUp = 0x0101
 $vkSpace = 0x20
-[NativeWindow]::PostMessage($premiere.MainWindowHandle, $wmKeyDown, [IntPtr]$vkSpace, [IntPtr]0) | Out-Null
-Start-Sleep -Milliseconds 60
-[NativeWindow]::PostMessage($premiere.MainWindowHandle, $wmKeyUp, [IntPtr]$vkSpace, [IntPtr]0) | Out-Null
-'Play/Pause enviado sin enfocar: ' + $premiere.MainWindowTitle
+$downLParam = [IntPtr]0x00390001
+$upLParam = [IntPtr]0xC0390001
+$targets = New-Object 'System.Collections.Generic.List[IntPtr]'
+$targets.Add($premiere.MainWindowHandle)
+$callback = [NativeWindow+EnumWindowProc]{
+  param([IntPtr]$hWnd, [IntPtr]$lParam)
+  $targets.Add($hWnd)
+  return $true
+}
+[NativeWindow]::EnumChildWindows($premiere.MainWindowHandle, $callback, [IntPtr]::Zero) | Out-Null
+foreach ($target in $targets) {
+  [NativeWindow]::PostMessage($target, $wmKeyDown, [IntPtr]$vkSpace, $downLParam) | Out-Null
+}
+Start-Sleep -Milliseconds 80
+foreach ($target in $targets) {
+  [NativeWindow]::PostMessage($target, $wmKeyUp, [IntPtr]$vkSpace, $upLParam) | Out-Null
+}
+'Play/Pause enviado sin enfocar a ' + $targets.Count + ' ventanas de Premiere: ' + $premiere.MainWindowTitle
 `;
   return runPowerShell(script);
 }
@@ -88,6 +106,8 @@ function connect() {
       ? await playToggle()
       : { ok: false, error: `Comando no soportado: ${message.command}` };
 
+    const stamp = new Date().toISOString();
+    console.log(`${stamp} Premiere ${result.ok ? result.message : result.error}`);
     send(socket, { type: "premiere-response", id: message.id, ...result });
   });
 

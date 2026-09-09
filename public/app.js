@@ -641,6 +641,9 @@ const rtcMonitors = {
   reconnectTimer: null,
   socket: null,
   pc: null,
+  reconnect: null,
+  lastFrameAt: Date.now(),
+  watchdogStarted: false,
   viewerId: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
   streamMap: {},
   videos: {}
@@ -2202,19 +2205,34 @@ function createMonitorVideo(image, name) {
   video.dataset.monitorStream = name;
   image.insertAdjacentElement("afterend", video);
   image.hidden = true;
+  watchRtcVideo(video);
   return video;
+}
+
+function watchRtcVideo(video) {
+  const onFrame = () => {
+    rtcMonitors.lastFrameAt = Date.now();
+    if (video.requestVideoFrameCallback) {
+      video.requestVideoFrameCallback(onFrame);
+    }
+  };
+
+  video.addEventListener("playing", () => {
+    rtcMonitors.lastFrameAt = Date.now();
+  });
+  video.addEventListener("timeupdate", () => {
+    rtcMonitors.lastFrameAt = Date.now();
+  });
+
+  if (video.requestVideoFrameCallback) {
+    video.requestVideoFrameCallback(onFrame);
+  }
 }
 
 function ensureRtcVideos() {
   const pairs = [
     [els.previewImage, "preview"],
-    [els.programImage, "program"],
-    [els.ptzPreviewImage, "preview"],
-    [els.ptzProgramImage, "program"],
-    [els.zocaloPreviewImage, "preview"],
-    [els.zocaloProgramImage, "program"],
-    [els.publicidadesPreviewImage, "preview"],
-    [els.publicidadesProgramImage, "program"]
+    [els.programImage, "program"]
   ];
 
   pairs.forEach(([image, name]) => {
@@ -2275,6 +2293,15 @@ function startRtcMonitors() {
   rtcMonitors.fallback = false;
   ensureRtcVideos();
   useMonitorImages(false);
+  if (!rtcMonitors.watchdogStarted) {
+    rtcMonitors.watchdogStarted = true;
+    setInterval(() => {
+      if (document.hidden || !rtcMonitors.started || rtcMonitors.fallback) return;
+      if (!rtcMonitors.pc || rtcMonitors.pc.connectionState !== "connected") return;
+      if (Date.now() - rtcMonitors.lastFrameAt < 9000) return;
+      rtcMonitors.reconnect?.(500);
+    }, 3000);
+  }
 
   const closeCurrentRtc = () => {
     if (rtcMonitors.fallbackTimer) {
@@ -2327,6 +2354,7 @@ function startRtcMonitors() {
       }, delay);
       if (closeNow) closeCurrentRtc();
     };
+    rtcMonitors.reconnect = scheduleReconnect;
 
     pc.ontrack = (event) => {
       const name = rtcMonitors.streamMap[event.transceiver?.mid] || (Object.keys(rtcMonitors.streamMap).length ? "program" : "preview");
@@ -2340,6 +2368,7 @@ function startRtcMonitors() {
         rtcMonitors.programStream = stream;
       }
       rtcMonitors.fallback = false;
+      rtcMonitors.lastFrameAt = Date.now();
       useMonitorImages(false);
       setRtcStreams(rtcMonitors.previewStream, rtcMonitors.programStream);
       if (gotPreviewTrack && gotProgramTrack && rtcMonitors.fallbackTimer) {
@@ -2423,20 +2452,28 @@ function renderMonitors() {
   els.zocaloPreviewName.textContent = inputTitle(state.preview);
   els.zocaloProgramName.textContent = inputTitle(state.active);
 
+  const allMonitorImages = [
+    els.previewImage,
+    els.programImage,
+    els.ptzPreviewImage,
+    els.ptzProgramImage,
+    els.zocaloPreviewImage,
+    els.zocaloProgramImage,
+    els.publicidadesPreviewImage,
+    els.publicidadesProgramImage
+  ].filter(Boolean);
+
   const monitorPairs = {
     multiview: [els.previewImage, els.programImage],
     ptz: [els.ptzPreviewImage, els.ptzProgramImage],
     zocalos: [els.zocaloPreviewImage, els.zocaloProgramImage],
     publicidades: [els.publicidadesPreviewImage, els.publicidadesProgramImage]
   };
-  const activePair = monitorPairs[state.activePanel] || monitorPairs.multiview;
+  const activePair = monitorPairs.multiview;
   if (rtcMonitors.started && window.PANEL_CONFIG?.monitorMode === "webrtc") {
-    Object.values(monitorPairs).forEach(([previewImage, programImage]) => {
-      [previewImage, programImage].forEach((image) => {
-        if (!image) return;
-        image.removeAttribute("src");
-        delete image.dataset.monitorStream;
-      });
+    allMonitorImages.forEach((image) => {
+      image.removeAttribute("src");
+      delete image.dataset.monitorStream;
     });
     return;
   }

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>PANEL TELEFEDERAL</title>
-    <link rel="stylesheet" href="/styles.css?v=rtc-stable-2">
+    <link rel="stylesheet" href="/styles.css?v=fixed-monitors-1">
     <script src="/panel-config.js"></script>
   </head>
   <body>
@@ -39,6 +39,17 @@
       </nav>
       <section class="quick-actions" id="quickActions" aria-label="Acciones rapidas del proyecto" hidden></section>
 
+      <section class="global-monitor-strip" aria-label="Monitores">
+        <article class="monitor preview-monitor">
+          <div class="monitor-label">Preview <span id="previewName">-</span></div>
+          <img id="previewImage" alt="Vista previa de vMix">
+        </article>
+        <article class="monitor program-monitor">
+          <div class="monitor-label">Aire <span id="programName">-</span></div>
+          <img id="programImage" alt="Vista al aire de vMix">
+        </article>
+      </section>
+
       <section class="workspace" data-panel="multiview" aria-label="Control de multiview">
         <div class="workspace-head">
           <div>
@@ -68,16 +79,6 @@
             <button type="button" class="editor-air-button" id="editorAirButton">Mandar este formato al aire</button>
           </section>
 
-          <section class="monitor-stack" aria-label="Monitores">
-            <article class="monitor preview-monitor">
-              <div class="monitor-label">Preview <span id="previewName">-</span></div>
-              <img id="previewImage" alt="Vista previa de vMix">
-            </article>
-            <article class="monitor program-monitor">
-              <div class="monitor-label">Aire <span id="programName">-</span></div>
-              <img id="programImage" alt="Vista al aire de vMix">
-            </article>
-          </section>
         </div>
       </section>
 
@@ -197,7 +198,7 @@
 
       <footer class="log-line" id="logLine">Listo para conectar con vMix.</footer>
     </main>
-    <script src="/app.js?v=rtc-stable-2"></script>
+    <script src="/app.js?v=fixed-monitors-1"></script>
   </body>
 </html>
 

@@ -266,6 +266,30 @@ function handleBridgeMonitorMessage(message) {
   }
 }
 
+function handleBridgeBinaryMessage(data) {
+  const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
+  if (buffer.length < 3) return;
+
+  const type = buffer[0];
+  const idLength = buffer.readUInt16BE(1);
+  const payloadOffset = 3 + idLength;
+  if (buffer.length < payloadOffset) return;
+
+  const id = buffer.subarray(3, payloadOffset).toString("utf8");
+  const res = bridgeMonitorStreams.get(id);
+  if (!res || res.destroyed) return;
+
+  if (type === 1) {
+    res.write(buffer.subarray(payloadOffset));
+    return;
+  }
+
+  if (type === 2) {
+    bridgeMonitorStreams.delete(id);
+    res.end();
+  }
+}
+
 function getJson(url) {
   return new Promise((resolve, reject) => {
     const request = https.get(url, { timeout: 7000 }, (response) => {
@@ -734,7 +758,12 @@ wss.on("connection", (socket, req) => {
   socket.bridgeRole = bridgeUrl.searchParams.get("role") || "control";
   bridgeClients.add(socket);
 
-  socket.on("message", (data) => {
+  socket.on("message", (data, isBinary) => {
+    if (isBinary) {
+      handleBridgeBinaryMessage(data);
+      return;
+    }
+
     try {
       const message = JSON.parse(data.toString("utf8"));
       if (message.type === "vmix-response") completeBridgeRequest(message);

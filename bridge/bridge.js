@@ -57,6 +57,16 @@ function bridgeUrl(role) {
   return url.toString();
 }
 
+function sendMonitorPacket(socket, type, id, payload = Buffer.alloc(0)) {
+  const idBuffer = Buffer.from(id, "utf8");
+  if (idBuffer.length > 65535) return;
+
+  const header = Buffer.alloc(3);
+  header[0] = type;
+  header.writeUInt16BE(idBuffer.length, 1);
+  socket.send(Buffer.concat([header, idBuffer, payload]));
+}
+
 function startMonitorStream(socket, id, streamPath) {
   const req = http.request(
     {
@@ -69,13 +79,13 @@ function startMonitorStream(socket, id, streamPath) {
     (res) => {
       res.on("data", (chunk) => {
         if (socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ type: "monitor-chunk", id, body: chunk.toString("base64") }));
+          sendMonitorPacket(socket, 1, id, chunk);
         }
       });
       res.on("end", () => {
         monitorRequests.delete(id);
         if (socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ type: "monitor-end", id }));
+          sendMonitorPacket(socket, 2, id);
         }
       });
     }
@@ -86,7 +96,7 @@ function startMonitorStream(socket, id, streamPath) {
   req.on("error", () => {
     monitorRequests.delete(id);
     if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "monitor-end", id }));
+      sendMonitorPacket(socket, 2, id);
     }
   });
   req.end();

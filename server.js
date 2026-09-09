@@ -165,7 +165,7 @@ function proxyVmix(req, res) {
 }
 
 function proxyVmixViaBridge(req, res) {
-  const bridge = bridgeClients.values().next().value;
+  const bridge = getBridgeClient("control");
 
   if (!bridge || bridge.readyState !== WebSocket.OPEN) {
     send(
@@ -207,7 +207,7 @@ function completeBridgeRequest(message) {
 }
 
 function streamMonitorViaBridge(req, res, monitorName) {
-  const bridge = bridgeClients.values().next().value;
+  const bridge = getBridgeClient("monitor");
 
   if (!bridge || bridge.readyState !== WebSocket.OPEN) {
     send(res, 502, "No hay bridge local conectado para monitores.");
@@ -233,6 +233,22 @@ function streamMonitorViaBridge(req, res, monitorName) {
 
   req.on("close", close);
   res.on("close", close);
+}
+
+function getBridgeClient(role) {
+  for (const socket of bridgeClients) {
+    if (socket.readyState === WebSocket.OPEN && socket.bridgeRole === role) {
+      return socket;
+    }
+  }
+
+  for (const socket of bridgeClients) {
+    if (socket.readyState === WebSocket.OPEN) {
+      return socket;
+    }
+  }
+
+  return null;
 }
 
 function handleBridgeMonitorMessage(message) {
@@ -707,13 +723,15 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocket.Server({ server, path: "/bridge" });
 
 wss.on("connection", (socket, req) => {
-  const token = new URL(req.url, `http://${req.headers.host}`).searchParams.get("token") || "";
+  const bridgeUrl = new URL(req.url, `http://${req.headers.host}`);
+  const token = bridgeUrl.searchParams.get("token") || "";
 
   if (!BRIDGE_SECRET || token !== BRIDGE_SECRET) {
     socket.close(1008, "Token invalido");
     return;
   }
 
+  socket.bridgeRole = bridgeUrl.searchParams.get("role") || "control";
   bridgeClients.add(socket);
 
   socket.on("message", (data) => {

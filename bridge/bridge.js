@@ -49,11 +49,11 @@ function vmixRequest(url) {
   });
 }
 
-function bridgeUrl() {
+function bridgeUrl(role) {
   const url = new URL(CLOUD_URL);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.pathname = "/bridge";
-  url.search = `?token=${encodeURIComponent(BRIDGE_SECRET)}`;
+  url.search = `?token=${encodeURIComponent(BRIDGE_SECRET)}&role=${encodeURIComponent(role)}`;
   return url.toString();
 }
 
@@ -92,11 +92,11 @@ function startMonitorStream(socket, id, streamPath) {
   req.end();
 }
 
-function connect() {
-  const socket = new WebSocket(bridgeUrl());
+function connect(role) {
+  const socket = new WebSocket(bridgeUrl(role));
 
   socket.addEventListener("open", () => {
-    console.log(`Bridge TELEFEDERAL conectado a ${CLOUD_URL}`);
+    console.log(`Bridge TELEFEDERAL ${role} conectado a ${CLOUD_URL}`);
   });
 
   socket.addEventListener("message", async (event) => {
@@ -124,13 +124,14 @@ function connect() {
   socket.addEventListener("close", () => {
     monitorRequests.forEach((request) => request.destroy());
     monitorRequests.clear();
-    console.log("Bridge desconectado. Reintentando...");
-    setTimeout(connect, 2500);
+    console.log(`Bridge ${role} desconectado. Reintentando...`);
+    setTimeout(() => connect(role), 2500);
   });
 
   socket.addEventListener("error", () => {
-    console.error("Bridge error.");
+    console.error(`Bridge ${role} error.`);
   });
 }
 
-connect();
+connect("control");
+connect("monitor");

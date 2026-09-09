@@ -543,10 +543,7 @@ const QUICK_ACTIONS = {
   ]
 };
 
-const GLOBAL_QUICK_ACTIONS = [
-  { label: "Premiere Play", kind: "premiere", command: "play" },
-  { label: "Premiere Stop", kind: "premiere", command: "stop" }
-];
+const GLOBAL_QUICK_ACTIONS = [];
 
 const PUBLICIDAD_ACTIONS = {
   telefederal: [

@@ -20,8 +20,6 @@ internal sealed class PanelForm : Form
 {
     private readonly WebView2 webView = new();
     private readonly Label status = new();
-    private readonly Button play = new();
-    private readonly Button stop = new();
 
     public PanelForm()
     {
@@ -50,20 +48,6 @@ internal sealed class PanelForm : Form
             ForeColor = Color.White
         };
 
-        play.Text = "Premiere Play";
-        play.Width = 150;
-        play.Dock = DockStyle.Right;
-        play.Margin = new Padding(8, 0, 0, 0);
-        StyleButton(play, Color.FromArgb(35, 94, 68));
-        play.Click += async (_, _) => await SendTransportAsync("play");
-
-        stop.Text = "Premiere Stop";
-        stop.Width = 150;
-        stop.Dock = DockStyle.Right;
-        stop.Margin = new Padding(8, 0, 0, 0);
-        StyleButton(stop, Color.FromArgb(118, 44, 55));
-        stop.Click += async (_, _) => await SendTransportAsync("stop");
-
         status.Text = "Panel listo";
         status.Dock = DockStyle.Fill;
         status.TextAlign = ContentAlignment.MiddleRight;
@@ -71,8 +55,6 @@ internal sealed class PanelForm : Form
         status.ForeColor = Color.FromArgb(202, 212, 232);
 
         bar.Controls.Add(status);
-        bar.Controls.Add(stop);
-        bar.Controls.Add(play);
         bar.Controls.Add(title);
 
         webView.Dock = DockStyle.Fill;
@@ -82,17 +64,6 @@ internal sealed class PanelForm : Form
         Controls.Add(bar);
 
         Shown += async (_, _) => await LoadPanelAsync();
-    }
-
-    private static void StyleButton(Button button, Color backColor)
-    {
-        button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderColor = Color.FromArgb(105, 120, 145);
-        button.FlatAppearance.BorderSize = 1;
-        button.BackColor = backColor;
-        button.ForeColor = Color.White;
-        button.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-        button.TabStop = false;
     }
 
     private async Task LoadPanelAsync()
@@ -117,30 +88,6 @@ internal sealed class PanelForm : Form
         }
     }
 
-    private async Task SendTransportAsync(string action)
-    {
-        play.Enabled = false;
-        stop.Enabled = false;
-        status.Text = action == "play" ? "Enviando Play a Premiere..." : "Enviando Stop a Premiere...";
-
-        try
-        {
-            var returnHandle = Handle;
-            await Task.Run(() => PremiereTransport.Send(action, returnHandle));
-            WindowState = FormWindowState.Maximized;
-            Activate();
-            status.Text = action == "play" ? "Premiere Play enviado" : "Premiere Stop enviado";
-        }
-        catch (Exception ex)
-        {
-            status.Text = "Premiere: " + ex.Message;
-        }
-        finally
-        {
-            play.Enabled = true;
-            stop.Enabled = true;
-        }
-    }
 }
 
 internal static class PremiereTransport

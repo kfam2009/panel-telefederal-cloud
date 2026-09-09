@@ -15,13 +15,15 @@
       <section class="publisher-grid">
         <article class="monitor preview-monitor">
           <div class="monitor-label">Preview <span id="previewStats">-</span></div>
-          <img id="previewSource" alt="Preview local">
-          <canvas id="previewCanvas" width="640" height="360"></canvas>
+          <video id="previewVideo" autoplay muted playsinline></video>
+          <img id="previewSource" alt="Preview local" hidden>
+          <canvas id="previewCanvas" width="640" height="360" hidden></canvas>
         </article>
         <article class="monitor program-monitor">
           <div class="monitor-label">Aire <span id="programStats">-</span></div>
-          <img id="programSource" alt="Aire local">
-          <canvas id="programCanvas" width="640" height="360"></canvas>
+          <video id="programVideo" autoplay muted playsinline></video>
+          <img id="programSource" alt="Aire local" hidden>
+          <canvas id="programCanvas" width="640" height="360" hidden></canvas>
         </article>
       </section>
       <footer class="log-line" id="publisherLog">Listo para publicar.</footer>

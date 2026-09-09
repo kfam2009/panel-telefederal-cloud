@@ -146,7 +146,7 @@ function Focus-Premiere([IntPtr]$hWnd) {
   $currentThread = [TeleFederalNativeWindow]::GetCurrentThreadId()
   [TeleFederalNativeWindow]::AttachThreadInput($currentThread, $targetThread, $true) | Out-Null
   try {
-    [TeleFederalNativeWindow]::ShowWindow($hWnd, 9) | Out-Null
+    [TeleFederalNativeWindow]::ShowWindow($hWnd, 3) | Out-Null
     [TeleFederalNativeWindow]::BringWindowToTop($hWnd) | Out-Null
     [TeleFederalNativeWindow]::SetActiveWindow($hWnd) | Out-Null
     [TeleFederalNativeWindow]::SetFocus($hWnd) | Out-Null
@@ -174,7 +174,7 @@ Start-Sleep -Milliseconds 750
 $foregroundOk = Test-ForegroundPremiere $premiere.MainWindowHandle
 Send-ShiftKey 0x33 0x04
 Start-Sleep -Milliseconds 350
-${isStop ? "Send-KeyLegacy 0x4B 0x25" : "Send-KeyLegacy 0x4B 0x25; Start-Sleep -Milliseconds 250; Send-KeyLegacy 0x4C 0x26"}
+${isStop ? "Send-KeyInput 0x4B; Start-Sleep -Milliseconds 120; Send-KeyLegacy 0x4B 0x25; Start-Sleep -Milliseconds 120; Send-PostKey $premiere.MainWindowHandle 0x4B 0x25" : "Send-KeyInput 0x4B; Start-Sleep -Milliseconds 150; Send-KeyLegacy 0x4B 0x25; Start-Sleep -Milliseconds 250; Send-KeyLegacy 0x4C 0x26"}
 Start-Sleep -Milliseconds 600
 'Premiere ${isStop ? "Stop" : "Play"} enviado por helper limpio. ForegroundPremiere=' + $foregroundOk + '. Ventana=' + $premiere.MainWindowTitle
 `;

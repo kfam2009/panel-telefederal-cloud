@@ -107,15 +107,88 @@ $premiere = Get-Process | Where-Object {
 } | Select-Object -First 1
 if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
 $previous = [NativeWindow]::GetForegroundWindow()
+$shell = New-Object -ComObject WScript.Shell
+$shell.AppActivate($premiere.Id) | Out-Null
 [NativeWindow]::SetForegroundWindow($premiere.MainWindowHandle) | Out-Null
 Start-Sleep -Milliseconds 180
-$shell = New-Object -ComObject WScript.Shell
-$shell.SendKeys(' ')
+$shell.SendKeys('+3')
+Start-Sleep -Milliseconds 120
+$shell.SendKeys('{SPACE}')
 Start-Sleep -Milliseconds 120
 if ($previous -ne [IntPtr]::Zero -and $previous -ne $premiere.MainWindowHandle) {
   [NativeWindow]::SetForegroundWindow($previous) | Out-Null
 }
 'Play/Pause enviado enfocando momentaneamente Premiere: ' + $premiere.MainWindowTitle
+`;
+  return runPowerShell(script);
+}
+
+async function playForwardFocus() {
+  const script = `
+$ErrorActionPreference = 'Stop'
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class NativeWindow {
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")]
+  public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+"@
+$premiere = Get-Process | Where-Object {
+  $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -match 'Premiere Pro' -or $_.ProcessName -match 'Adobe Premiere')
+} | Select-Object -First 1
+if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
+$previous = [NativeWindow]::GetForegroundWindow()
+$shell = New-Object -ComObject WScript.Shell
+$shell.AppActivate($premiere.Id) | Out-Null
+[NativeWindow]::SetForegroundWindow($premiere.MainWindowHandle) | Out-Null
+Start-Sleep -Milliseconds 180
+$shell.SendKeys('+3')
+Start-Sleep -Milliseconds 120
+$shell.SendKeys('k')
+Start-Sleep -Milliseconds 70
+$shell.SendKeys('l')
+Start-Sleep -Milliseconds 120
+if ($previous -ne [IntPtr]::Zero -and $previous -ne $premiere.MainWindowHandle) {
+  [NativeWindow]::SetForegroundWindow($previous) | Out-Null
+}
+'Play enviado enfocando momentaneamente Timeline de Premiere: ' + $premiere.MainWindowTitle
+`;
+  return runPowerShell(script);
+}
+
+async function stopFocus() {
+  const script = `
+$ErrorActionPreference = 'Stop'
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class NativeWindow {
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")]
+  public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+"@
+$premiere = Get-Process | Where-Object {
+  $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -match 'Premiere Pro' -or $_.ProcessName -match 'Adobe Premiere')
+} | Select-Object -First 1
+if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
+$previous = [NativeWindow]::GetForegroundWindow()
+$shell = New-Object -ComObject WScript.Shell
+$shell.AppActivate($premiere.Id) | Out-Null
+[NativeWindow]::SetForegroundWindow($premiere.MainWindowHandle) | Out-Null
+Start-Sleep -Milliseconds 180
+$shell.SendKeys('+3')
+Start-Sleep -Milliseconds 120
+$shell.SendKeys('k')
+Start-Sleep -Milliseconds 120
+if ($previous -ne [IntPtr]::Zero -and $previous -ne $premiere.MainWindowHandle) {
+  [NativeWindow]::SetForegroundWindow($previous) | Out-Null
+}
+'Stop enviado enfocando momentaneamente Timeline de Premiere: ' + $premiere.MainWindowTitle
 `;
   return runPowerShell(script);
 }
@@ -141,7 +214,11 @@ function connect(baseUrl) {
       ? await playToggle()
       : message.command === "playToggleFocus"
         ? await playToggleFocus()
-        : { ok: false, error: `Comando no soportado: ${message.command}` };
+        : message.command === "playForwardFocus"
+          ? await playForwardFocus()
+          : message.command === "stopFocus"
+            ? await stopFocus()
+            : { ok: false, error: `Comando no soportado: ${message.command}` };
 
     const stamp = new Date().toISOString();
     console.log(`${stamp} Premiere ${result.ok ? result.message : result.error}`);

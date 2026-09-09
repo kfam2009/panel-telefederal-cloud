@@ -175,7 +175,7 @@ function sendPremiereCommand(req, res) {
 
   premiereRequests.set(requestId, { res, timeout });
   const requestPath = new URL(req.url, `http://${req.headers.host}`).pathname;
-  const command = requestPath.includes("play-focus") ? "playToggleFocus" : "playToggle";
+  const command = requestPath.includes("stop") ? "stopFocus" : requestPath.includes("play-forward") ? "playForwardFocus" : requestPath.includes("play-focus") ? "playToggleFocus" : "playToggle";
   premiere.send(JSON.stringify({ type: "premiere-command", id: requestId, command }));
 }
 
@@ -846,7 +846,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.url.startsWith("/premiere/play")) {
+  if (req.url.startsWith("/premiere/play") || req.url.startsWith("/premiere/stop")) {
     sendPremiereCommand(req, res);
     return;
   }

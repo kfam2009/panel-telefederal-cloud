@@ -69,8 +69,7 @@
       });
     }
 
-    if (!jsxLoaded) loadJsx(execute);
-    else execute();
+    loadJsx(execute);
   }
 
   function encodePowerShell(script) {
@@ -202,6 +201,7 @@
   };
 
   loadJsx(function (result) {
+    log("TELEFEDERAL Bridge 1.0.4");
     log("JSX cargado: " + (result || "OK"));
   });
   TARGETS.forEach(connect);

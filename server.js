@@ -24,6 +24,10 @@ const MONITOR_DEVICES = {
   program: process.env.PANEL_PROGRAM_DEVICE || process.env.VMIX_PROGRAM_DEVICE || "vMix Video",
   preview: process.env.PANEL_PREVIEW_DEVICE || process.env.VMIX_PREVIEW_DEVICE || "vMix Video External 2"
 };
+const MONITOR_WIDTH = Number(process.env.PANEL_MONITOR_WIDTH || 640);
+const MONITOR_HEIGHT = Number(process.env.PANEL_MONITOR_HEIGHT || 360);
+const MONITOR_FPS = Number(process.env.PANEL_MONITOR_FPS || 20);
+const MONITOR_QUALITY = Number(process.env.PANEL_MONITOR_QUALITY || 10);
 const ENABLE_MONITORS = process.env.ENABLE_PANEL_MONITORS !== "0";
 const USE_VMIX_EXTERNAL = process.env.PANEL_MONITOR_SOURCE === "vmix-external";
 const monitorStreams = new Map();
@@ -608,19 +612,29 @@ function getSharedMonitorStream(monitorName, device) {
       "-hide_banner",
       "-loglevel",
       "error",
+      "-fflags",
+      "nobuffer",
+      "-flags",
+      "low_delay",
+      "-probesize",
+      "32",
+      "-analyzeduration",
+      "0",
       "-f",
       "dshow",
       "-rtbufsize",
-      "128M",
+      "16M",
       "-i",
       `video=${device}`,
       "-an",
       "-vf",
-      "scale=854:480,fps=25",
+      `scale=${MONITOR_WIDTH}:${MONITOR_HEIGHT},fps=${MONITOR_FPS}`,
       "-c:v",
       "mjpeg",
       "-q:v",
-      "7",
+      String(MONITOR_QUALITY),
+      "-flush_packets",
+      "1",
       "-f",
       "mpjpeg",
       "pipe:1"

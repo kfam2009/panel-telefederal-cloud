@@ -6,6 +6,7 @@ const VMIX_HOST = process.env.VMIX_HOST || "127.0.0.1";
 const VMIX_PORT = Number(process.env.VMIX_PORT || 8088);
 const LOCAL_PANEL_HOST = process.env.LOCAL_PANEL_HOST || "127.0.0.1";
 const LOCAL_PANEL_PORT = Number(process.env.LOCAL_PANEL_PORT || 3005);
+const MONITOR_RELAY_FPS = Number(process.env.MONITOR_RELAY_FPS || 12);
 const monitorRequests = new Map();
 
 if (!CLOUD_URL || !BRIDGE_SECRET) {
@@ -67,39 +68,69 @@ function sendMonitorPacket(socket, type, id, payload = Buffer.alloc(0)) {
   socket.send(Buffer.concat([header, idBuffer, payload]));
 }
 
-function startMonitorStream(socket, id, streamPath) {
-  const req = http.request(
-    {
-      host: LOCAL_PANEL_HOST,
-      port: LOCAL_PANEL_PORT,
-      method: "GET",
-      path: streamPath,
-      timeout: 7000
-    },
-    (res) => {
-      res.on("data", (chunk) => {
-        if (socket.readyState === WebSocket.OPEN) {
-          sendMonitorPacket(socket, 1, id, chunk);
-        }
-      });
-      res.on("end", () => {
-        monitorRequests.delete(id);
-        if (socket.readyState === WebSocket.OPEN) {
-          sendMonitorPacket(socket, 2, id);
-        }
-      });
-    }
-  );
+function requestLocalFrame(framePath) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        host: LOCAL_PANEL_HOST,
+        port: LOCAL_PANEL_PORT,
+        method: "GET",
+        path: framePath,
+        timeout: 1000
+      },
+      (res) => {
+        const chunks = [];
+        res.on("data", (chunk) => chunks.push(chunk));
+        res.on("end", () => {
+          if ((res.statusCode || 500) >= 400) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+            return;
+          }
+          resolve(Buffer.concat(chunks));
+        });
+      }
+    );
 
-  monitorRequests.set(id, req);
-  req.on("timeout", () => req.destroy());
-  req.on("error", () => {
-    monitorRequests.delete(id);
-    if (socket.readyState === WebSocket.OPEN) {
-      sendMonitorPacket(socket, 2, id);
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Timeout"));
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function startMonitorStream(socket, id, streamPath) {
+  const framePath = streamPath.replace(/\.mjpg(?:\?.*)?$/, "-frame.jpg");
+  const delay = Math.max(33, Math.round(1000 / Math.max(1, MONITOR_RELAY_FPS)));
+  const relay = { interval: null, inFlight: false, stopped: false };
+
+  const sendFrame = async () => {
+    if (relay.stopped || relay.inFlight || socket.readyState !== WebSocket.OPEN) return;
+    if (socket.bufferedAmount > 512 * 1024) return;
+
+    relay.inFlight = true;
+    try {
+      const jpeg = await requestLocalFrame(framePath);
+      const header = Buffer.from(
+        `--ffmpeg\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpeg.length}\r\n\r\n`,
+        "utf8"
+      );
+      sendMonitorPacket(socket, 1, id, Buffer.concat([header, jpeg, Buffer.from("\r\n")]));
+    } catch {
+    } finally {
+      relay.inFlight = false;
+    }
+  };
+
+  relay.interval = setInterval(sendFrame, delay);
+  monitorRequests.set(id, {
+    destroy() {
+      relay.stopped = true;
+      clearInterval(relay.interval);
     }
   });
-  req.end();
+  sendFrame();
 }
 
 function connect(role) {

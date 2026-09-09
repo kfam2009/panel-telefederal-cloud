@@ -29,6 +29,7 @@ const USE_VMIX_EXTERNAL = process.env.PANEL_MONITOR_SOURCE === "vmix-external";
 const monitorStreams = new Map();
 const bridgeClients = new Set();
 const bridgeRequests = new Map();
+const bridgeMonitorStreams = new Map();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -96,7 +97,7 @@ function servePanelConfig(res) {
   send(
     res,
     200,
-    `window.PANEL_CONFIG = ${JSON.stringify({ monitorBase: LOCAL_MONITOR_BASE })};`,
+    `window.PANEL_CONFIG = ${JSON.stringify({ monitorBase: BRIDGE_SECRET ? "" : LOCAL_MONITOR_BASE })};`,
     "text/javascript; charset=utf-8"
   );
 }
@@ -203,6 +204,50 @@ function completeBridgeRequest(message) {
 
   const body = Buffer.from(message.body || "", "base64");
   send(pending.res, message.statusCode || 200, body, message.contentType || "text/plain; charset=utf-8");
+}
+
+function streamMonitorViaBridge(req, res, monitorName) {
+  const bridge = bridgeClients.values().next().value;
+
+  if (!bridge || bridge.readyState !== WebSocket.OPEN) {
+    send(res, 502, "No hay bridge local conectado para monitores.");
+    return;
+  }
+
+  const requestId = `monitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  res.writeHead(200, {
+    "Content-Type": "multipart/x-mixed-replace; boundary=ffmpeg",
+    "Cache-Control": "no-store",
+    "Connection": "close"
+  });
+
+  bridgeMonitorStreams.set(requestId, res);
+  bridge.send(JSON.stringify({ type: "monitor", id: requestId, path: `/monitor/${monitorName}.mjpg` }));
+
+  const close = () => {
+    bridgeMonitorStreams.delete(requestId);
+    if (bridge.readyState === WebSocket.OPEN) {
+      bridge.send(JSON.stringify({ type: "monitor-cancel", id: requestId }));
+    }
+  };
+
+  req.on("close", close);
+  res.on("close", close);
+}
+
+function handleBridgeMonitorMessage(message) {
+  const res = bridgeMonitorStreams.get(message.id);
+  if (!res || res.destroyed) return;
+
+  if (message.type === "monitor-chunk") {
+    res.write(Buffer.from(message.body || "", "base64"));
+    return;
+  }
+
+  if (message.type === "monitor-end") {
+    bridgeMonitorStreams.delete(message.id);
+    res.end();
+  }
 }
 
 function getJson(url) {
@@ -587,6 +632,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (BRIDGE_SECRET && req.url.startsWith("/monitor/program.mjpg")) {
+    streamMonitorViaBridge(req, res, "program");
+    return;
+  }
+
+  if (BRIDGE_SECRET && req.url.startsWith("/monitor/preview.mjpg")) {
+    streamMonitorViaBridge(req, res, "preview");
+    return;
+  }
+
   if (IS_REMOTE_VMIX && req.url.startsWith("/monitor/")) {
     send(res, 204, "");
     return;
@@ -665,12 +720,19 @@ wss.on("connection", (socket, req) => {
     try {
       const message = JSON.parse(data.toString("utf8"));
       if (message.type === "vmix-response") completeBridgeRequest(message);
+      if (message.type === "monitor-chunk" || message.type === "monitor-end") handleBridgeMonitorMessage(message);
     } catch (error) {
       console.error(`Bridge message invalido: ${error.message}`);
     }
   });
 
-  socket.on("close", () => bridgeClients.delete(socket));
+  socket.on("close", () => {
+    bridgeClients.delete(socket);
+    bridgeMonitorStreams.forEach((res) => {
+      if (!res.destroyed) res.end();
+    });
+    bridgeMonitorStreams.clear();
+  });
 });
 
 server.listen(PORT, () => {

@@ -107,6 +107,8 @@ async function start() {
     return;
   }
 
+  els.previewSource.src = `/monitor/preview.mjpg?v=${Date.now()}`;
+  els.programSource.src = `/monitor/program.mjpg?v=${Date.now()}`;
   drawLoop(els.previewSource, els.previewCanvas, els.previewStats);
   drawLoop(els.programSource, els.programCanvas, els.programStats);
   tracks.preview = els.previewCanvas.captureStream(rtcFps).getVideoTracks()[0];

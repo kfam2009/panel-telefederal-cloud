@@ -1,5 +1,4 @@
 const http = require("http");
-const WebSocket = require("ws");
 
 const CLOUD_URL = process.env.PANEL_CLOUD_URL;
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET;

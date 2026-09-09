@@ -770,7 +770,7 @@ const server = http.createServer((req, res) => {
   serveStatic(req, res);
 });
 
-const wss = new WebSocket.Server({ server, path: "/bridge" });
+const wss = new WebSocket.Server({ noServer: true });
 
 wss.on("connection", (socket, req) => {
   const bridgeUrl = new URL(req.url, `http://${req.headers.host}`);
@@ -808,7 +808,7 @@ wss.on("connection", (socket, req) => {
   });
 });
 
-const rtcWss = new WebSocket.Server({ server, path: "/rtc" });
+const rtcWss = new WebSocket.Server({ noServer: true });
 
 function sendSocket(socket, message) {
   if (socket && socket.readyState === WebSocket.OPEN) {
@@ -876,6 +876,20 @@ rtcWss.on("connection", (socket, req) => {
       rtcViewers.delete(viewerId);
       forwardToPublisher({ type: "viewer-left", viewerId });
     }
+  });
+});
+
+server.on("upgrade", (req, socket, head) => {
+  const pathname = new URL(req.url, `http://${req.headers.host}`).pathname;
+  const target = pathname === "/bridge" ? wss : pathname === "/rtc" ? rtcWss : null;
+
+  if (!target) {
+    socket.destroy();
+    return;
+  }
+
+  target.handleUpgrade(req, socket, head, (ws) => {
+    target.emit("connection", ws, req);
   });
 });
 

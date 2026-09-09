@@ -293,7 +293,7 @@ const PROJECTS = {
   },
   telefederal: {
     name: "TELEFEDERAL",
-    help: "Multiviews de TeleFederal. El video queda fijo y la Call 60 se puede elegir como camara.",
+    help: "Multiviews de TeleFederal. El video queda fijo y la Call 76 se puede elegir como camara.",
     defaultLayout: "12",
     defaultPtz: "26",
     zowitekInput: "68",
@@ -306,7 +306,7 @@ const PROJECTS = {
       { input: "6", label: "C6" },
       { input: "68", label: "Zowitek" },
       { input: "26", label: "PTZ" },
-      { input: "60", label: "Call" }
+      { input: "76", label: "Call" }
     ],
     layouts: [
       { input: "12", label: "2 Camaras", layers: ["2", "3"] },
@@ -342,10 +342,10 @@ const PROJECTS = {
       { input: "57", label: "TANDA 2" },
       { input: "58", label: "TANDA 1" },
       { input: "59", label: "PNT MECANIZADOS SR" },
-      { input: "60", label: "Call" },
-      { input: "61", label: "PNT LUBRICENTRO" },
-      { input: "62", label: "Audio Micrófono" },
-      { input: "63", label: "PNT ESTILORAK" }
+      { input: "60", label: "PNT LUBRICENTRO" },
+      { input: "61", label: "PNT ESTILORAK" },
+      { input: "62", label: "PNT LOCOS POR LA CERVEZA" },
+      { input: "76", label: "Call" }
     ],
     zocalos: [
       { id: "telefederal-zocalo-1", input: "40", label: "Zocalo 1", lines: 1, fields: ["TextBlock1.Text"], fieldLabels: ["RENGLON ZOCALO 1", "Sin segundo renglon"], overlay: "1" }
@@ -495,7 +495,7 @@ const QUICK_ACTIONS = {
     { label: "Zowitek", fn: "CutDirect", input: "68" },
     { label: "PTZ desde Previo", fn: "CutDirect", input: "0" },
     { label: "Video", fn: "CutDirect", input: "15" },
-    { label: "Call", fn: "CutDirect", input: "60" },
+    { label: "Call", fn: "CutDirect", input: "76" },
     { label: "Dos Camaras", fn: "CutDirect", input: "12" },
     { label: "Tres Camaras", fn: "CutDirect", input: "13" },
     { label: "Cuatro Camaras", fn: "CutDirect", input: "14" },
@@ -557,9 +557,9 @@ const PUBLICIDAD_ACTIONS = {
         { label: "FILIPPONE", fn: "CutDirect", input: "55" },
         { label: "FINANCIERA FENIX", fn: "CutDirect", input: "56" },
         { label: "MECANIZADOS SR", fn: "CutDirect", input: "59" },
-        { label: "LOCOS POR LA CERVEZA", fn: "CutDirect", input: "69", resetOnComplete: true },
-        { label: "LUBRICENTRO", fn: "CutDirect", input: "61" },
-        { label: "ESTILORAK", fn: "CutDirect", input: "63" }
+        { label: "LOCOS POR LA CERVEZA", fn: "CutDirect", input: "62", resetOnComplete: true },
+        { label: "LUBRICENTRO", fn: "CutDirect", input: "60" },
+        { label: "ESTILORAK", fn: "CutDirect", input: "61" }
       ]
     },
     {

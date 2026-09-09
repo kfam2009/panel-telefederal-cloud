@@ -2303,6 +2303,8 @@ function startRtcMonitors() {
     const socket = new WebSocket(rtcUrl());
     rtcMonitors.socket = socket;
     rtcMonitors.streamMap = {};
+    let gotPreviewTrack = false;
+    let gotProgramTrack = false;
 
     const pc = new RTCPeerConnection({ iceServers: window.PANEL_CONFIG?.iceServers || [] });
     rtcMonitors.pc = pc;
@@ -2327,18 +2329,20 @@ function startRtcMonitors() {
     };
 
     pc.ontrack = (event) => {
-      if (rtcMonitors.previewStream && rtcMonitors.programStream && rtcMonitors.fallbackTimer) {
-        clearTimeout(rtcMonitors.fallbackTimer);
-        rtcMonitors.fallbackTimer = null;
-      }
       const name = rtcMonitors.streamMap[event.transceiver?.mid] || (Object.keys(rtcMonitors.streamMap).length ? "program" : "preview");
       const stream = event.streams[0] || new MediaStream([event.track]);
-      if (name === "preview") rtcMonitors.previewStream = stream;
-      if (name === "program") rtcMonitors.programStream = stream;
+      if (name === "preview") {
+        gotPreviewTrack = true;
+        rtcMonitors.previewStream = stream;
+      }
+      if (name === "program") {
+        gotProgramTrack = true;
+        rtcMonitors.programStream = stream;
+      }
       rtcMonitors.fallback = false;
       useMonitorImages(false);
       setRtcStreams(rtcMonitors.previewStream, rtcMonitors.programStream);
-      if (rtcMonitors.previewStream && rtcMonitors.programStream && rtcMonitors.fallbackTimer) {
+      if (gotPreviewTrack && gotProgramTrack && rtcMonitors.fallbackTimer) {
         clearTimeout(rtcMonitors.fallbackTimer);
         rtcMonitors.fallbackTimer = null;
       }
@@ -2364,7 +2368,7 @@ function startRtcMonitors() {
     socket.addEventListener("open", () => {
       socket.send(JSON.stringify({ type: "viewer-ready" }));
       rtcMonitors.fallbackTimer = setTimeout(() => {
-        if (!rtcMonitors.previewStream || !rtcMonitors.programStream) scheduleReconnect();
+        if (!gotPreviewTrack || !gotProgramTrack) scheduleReconnect();
       }, 15000);
     });
     socket.addEventListener("message", async (event) => {

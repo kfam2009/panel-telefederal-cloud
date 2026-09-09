@@ -664,6 +664,9 @@ const els = {
   masterPeakR: document.querySelector("#masterPeakR"),
   masterDbL: document.querySelector("#masterDbL"),
   masterDbR: document.querySelector("#masterDbR"),
+  premiereControls: document.querySelector("#premiereControls"),
+  premiereStatus: document.querySelector("#premiereStatus"),
+  premiereButtons: [...document.querySelectorAll("[data-premiere-action]")],
   quickActions: document.querySelector("#quickActions"),
   formatGrid: document.querySelector("#formatGrid"),
   formatGrids: [...document.querySelectorAll("[data-format-grid]")],
@@ -1152,6 +1155,31 @@ async function callPremiere(action = "play") {
   }
   if (!response.ok) throw new Error(payload.error || text || "No pude controlar Premiere.");
   return payload;
+}
+
+function setPremiereStatus(connected, text) {
+  if (!els.premiereControls || !els.premiereStatus) return;
+  els.premiereControls.classList.toggle("is-online", connected);
+  els.premiereControls.classList.toggle("is-offline", !connected);
+  els.premiereStatus.textContent = text;
+}
+
+async function refreshPremiereStatus() {
+  try {
+    const response = await fetch("/premiere/status", { cache: "no-store" });
+    const payload = await response.json();
+    setPremiereStatus(!!payload.connected, payload.connected ? "Premiere OK" : "Sin Premiere");
+  } catch {
+    setPremiereStatus(false, "Sin Premiere");
+  }
+}
+
+async function runPremierePanelAction(action) {
+  const isStop = action === "stop";
+  setLog(`Enviando ${isStop ? "Stop" : "Play"} a Premiere...`);
+  const result = await callPremiere(isStop ? "stop" : "play");
+  setLog(`Premiere: ${result.message || "comando enviado."}`);
+  refreshPremiereStatus();
 }
 
 async function requestText(url) {
@@ -2880,6 +2908,14 @@ document.addEventListener("click", async (event) => {
   if (projectTab) { state.userSelectedProject = true; setActiveProject(projectTab.dataset.projectTab); return; }
   const panelTab = event.target.closest("[data-panel-tab]");
   if (panelTab) { setActivePanel(panelTab.dataset.panelTab); return; }
+  const premiereAction = event.target.closest("[data-premiere-action]");
+  if (premiereAction) {
+    premiereAction.disabled = true;
+    try { await runPremierePanelAction(premiereAction.dataset.premiereAction); }
+    catch (error) { setLog(error.message); }
+    finally { premiereAction.disabled = false; }
+    return;
+  }
   const quickAction = event.target.closest("[data-quick-action]");
   if (quickAction) {
     quickAction.disabled = true;
@@ -3039,8 +3075,10 @@ document.addEventListener("focusin", (event) => {
 loadZocaloLibrary();
 loadZocaloOverlaySlots();
 refreshState(true);
+refreshPremiereStatus();
 setTimeout(refreshFlapClockWeather, 2000);
 setInterval(() => refreshState(false), 3500);
+setInterval(refreshPremiereStatus, 4000);
 setInterval(refreshAudioMeter, 500);
 setInterval(renderMonitors, 6000);
 setInterval(refreshFlapClockWeather, 60000);

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>PANEL TELEFEDERAL</title>
-    <link rel="stylesheet" href="/styles.css?v=localcam-premiere-3">
+    <link rel="stylesheet" href="/styles.css?v=localcam-premiere-4">
     <script src="/panel-config.js"></script>
   </head>
   <body>
@@ -16,6 +16,11 @@
         </div>
         <nav class="project-tabs" aria-label="Proyecto"><button type="button" class="project-tab is-active" data-project-tab="telefederal">TELEFEDERAL</button></nav>
         <div class="topbar-right">
+          <div class="premiere-controls" id="premiereControls" aria-label="Control Premiere">
+            <span class="premiere-status" id="premiereStatus">Premiere...</span>
+            <button type="button" class="premiere-button is-play" data-premiere-action="play">Play</button>
+            <button type="button" class="premiere-button is-stop" data-premiere-action="stop">Stop</button>
+          </div>
           <div class="master-meter" id="masterMeter" aria-label="Vumetro master">
             <span class="meter-title">MASTER</span>
             <div class="meter-bars">
@@ -198,7 +203,7 @@
 
       <footer class="log-line" id="logLine">Listo para conectar con vMix.</footer>
     </main>
-    <script src="/app.js?v=localcam-premiere-3"></script>
+    <script src="/app.js?v=localcam-premiere-4"></script>
   </body>
 </html>
 

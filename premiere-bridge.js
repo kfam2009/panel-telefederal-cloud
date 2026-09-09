@@ -130,31 +130,71 @@ Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class NativeWindow {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct INPUT {
+    public UInt32 type;
+    public KEYBDINPUT ki;
+  }
+  [StructLayout(LayoutKind.Sequential)]
+  public struct KEYBDINPUT {
+    public UInt16 wVk;
+    public UInt16 wScan;
+    public UInt32 dwFlags;
+    public UInt32 time;
+    public IntPtr dwExtraInfo;
+  }
   [DllImport("user32.dll")]
   public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")]
   public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll", SetLastError = true)]
+  public static extern UInt32 SendInput(UInt32 nInputs, INPUT[] pInputs, Int32 cbSize);
 }
 "@
+function Send-Key([UInt16]$vk, [int]$holdMs = 45) {
+  $down = New-Object NativeWindow+INPUT
+  $down.type = 1
+  $down.ki.wVk = $vk
+  $up = New-Object NativeWindow+INPUT
+  $up.type = 1
+  $up.ki.wVk = $vk
+  $up.ki.dwFlags = 0x0002
+  [NativeWindow]::SendInput(1, [NativeWindow+INPUT[]]@($down), [Runtime.InteropServices.Marshal]::SizeOf([type][NativeWindow+INPUT])) | Out-Null
+  Start-Sleep -Milliseconds $holdMs
+  [NativeWindow]::SendInput(1, [NativeWindow+INPUT[]]@($up), [Runtime.InteropServices.Marshal]::SizeOf([type][NativeWindow+INPUT])) | Out-Null
+}
+function Send-ShiftKey([UInt16]$vk) {
+  $shiftDown = New-Object NativeWindow+INPUT
+  $shiftDown.type = 1
+  $shiftDown.ki.wVk = 0x10
+  $keyDown = New-Object NativeWindow+INPUT
+  $keyDown.type = 1
+  $keyDown.ki.wVk = $vk
+  $keyUp = New-Object NativeWindow+INPUT
+  $keyUp.type = 1
+  $keyUp.ki.wVk = $vk
+  $keyUp.ki.dwFlags = 0x0002
+  $shiftUp = New-Object NativeWindow+INPUT
+  $shiftUp.type = 1
+  $shiftUp.ki.wVk = 0x10
+  $shiftUp.ki.dwFlags = 0x0002
+  [NativeWindow]::SendInput(4, [NativeWindow+INPUT[]]@($shiftDown, $keyDown, $keyUp, $shiftUp), [Runtime.InteropServices.Marshal]::SizeOf([type][NativeWindow+INPUT])) | Out-Null
+}
 $premiere = Get-Process | Where-Object {
   $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -match 'Premiere Pro' -or $_.ProcessName -match 'Adobe Premiere')
 } | Select-Object -First 1
 if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
-$previous = [NativeWindow]::GetForegroundWindow()
 $shell = New-Object -ComObject WScript.Shell
 $shell.AppActivate($premiere.Id) | Out-Null
 [NativeWindow]::SetForegroundWindow($premiere.MainWindowHandle) | Out-Null
-Start-Sleep -Milliseconds 180
-$shell.SendKeys('+3')
-Start-Sleep -Milliseconds 120
-$shell.SendKeys('k')
-Start-Sleep -Milliseconds 70
-$shell.SendKeys('l')
-Start-Sleep -Milliseconds 120
-if ($previous -ne [IntPtr]::Zero -and $previous -ne $premiere.MainWindowHandle) {
-  [NativeWindow]::SetForegroundWindow($previous) | Out-Null
-}
-'Play enviado enfocando momentaneamente Timeline de Premiere: ' + $premiere.MainWindowTitle
+Start-Sleep -Milliseconds 500
+Send-ShiftKey 0x33
+Start-Sleep -Milliseconds 250
+Send-Key 0x4B
+Start-Sleep -Milliseconds 160
+Send-Key 0x4C
+Start-Sleep -Milliseconds 250
+'Play enviado a Premiere con SendInput: ' + $premiere.MainWindowTitle
 `;
   return runPowerShell(script);
 }
@@ -166,29 +206,69 @@ Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class NativeWindow {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct INPUT {
+    public UInt32 type;
+    public KEYBDINPUT ki;
+  }
+  [StructLayout(LayoutKind.Sequential)]
+  public struct KEYBDINPUT {
+    public UInt16 wVk;
+    public UInt16 wScan;
+    public UInt32 dwFlags;
+    public UInt32 time;
+    public IntPtr dwExtraInfo;
+  }
   [DllImport("user32.dll")]
   public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")]
   public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll", SetLastError = true)]
+  public static extern UInt32 SendInput(UInt32 nInputs, INPUT[] pInputs, Int32 cbSize);
 }
 "@
+function Send-Key([UInt16]$vk, [int]$holdMs = 45) {
+  $down = New-Object NativeWindow+INPUT
+  $down.type = 1
+  $down.ki.wVk = $vk
+  $up = New-Object NativeWindow+INPUT
+  $up.type = 1
+  $up.ki.wVk = $vk
+  $up.ki.dwFlags = 0x0002
+  [NativeWindow]::SendInput(1, [NativeWindow+INPUT[]]@($down), [Runtime.InteropServices.Marshal]::SizeOf([type][NativeWindow+INPUT])) | Out-Null
+  Start-Sleep -Milliseconds $holdMs
+  [NativeWindow]::SendInput(1, [NativeWindow+INPUT[]]@($up), [Runtime.InteropServices.Marshal]::SizeOf([type][NativeWindow+INPUT])) | Out-Null
+}
+function Send-ShiftKey([UInt16]$vk) {
+  $shiftDown = New-Object NativeWindow+INPUT
+  $shiftDown.type = 1
+  $shiftDown.ki.wVk = 0x10
+  $keyDown = New-Object NativeWindow+INPUT
+  $keyDown.type = 1
+  $keyDown.ki.wVk = $vk
+  $keyUp = New-Object NativeWindow+INPUT
+  $keyUp.type = 1
+  $keyUp.ki.wVk = $vk
+  $keyUp.ki.dwFlags = 0x0002
+  $shiftUp = New-Object NativeWindow+INPUT
+  $shiftUp.type = 1
+  $shiftUp.ki.wVk = 0x10
+  $shiftUp.ki.dwFlags = 0x0002
+  [NativeWindow]::SendInput(4, [NativeWindow+INPUT[]]@($shiftDown, $keyDown, $keyUp, $shiftUp), [Runtime.InteropServices.Marshal]::SizeOf([type][NativeWindow+INPUT])) | Out-Null
+}
 $premiere = Get-Process | Where-Object {
   $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -match 'Premiere Pro' -or $_.ProcessName -match 'Adobe Premiere')
 } | Select-Object -First 1
 if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
-$previous = [NativeWindow]::GetForegroundWindow()
 $shell = New-Object -ComObject WScript.Shell
 $shell.AppActivate($premiere.Id) | Out-Null
 [NativeWindow]::SetForegroundWindow($premiere.MainWindowHandle) | Out-Null
-Start-Sleep -Milliseconds 180
-$shell.SendKeys('+3')
-Start-Sleep -Milliseconds 120
-$shell.SendKeys('k')
-Start-Sleep -Milliseconds 120
-if ($previous -ne [IntPtr]::Zero -and $previous -ne $premiere.MainWindowHandle) {
-  [NativeWindow]::SetForegroundWindow($previous) | Out-Null
-}
-'Stop enviado enfocando momentaneamente Timeline de Premiere: ' + $premiere.MainWindowTitle
+Start-Sleep -Milliseconds 500
+Send-ShiftKey 0x33
+Start-Sleep -Milliseconds 250
+Send-Key 0x4B
+Start-Sleep -Milliseconds 250
+'Stop enviado a Premiere con SendInput: ' + $premiere.MainWindowTitle
 `;
   return runPowerShell(script);
 }

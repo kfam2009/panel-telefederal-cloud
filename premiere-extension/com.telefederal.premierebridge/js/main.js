@@ -9,6 +9,7 @@
   var sockets = [];
   var statusEl = document.getElementById("status");
   var logEl = document.getElementById("log");
+  var jsxLoaded = false;
 
   function log(message) {
     var line = new Date().toLocaleTimeString() + " " + message;
@@ -31,14 +32,38 @@
     window.__adobe_cep__.evalScript(script, callback);
   }
 
+  function extensionRoot() {
+    var path = decodeURI(window.location.pathname || "");
+    path = path.replace(/^\/([A-Za-z]:\/)/, "$1");
+    path = path.replace(/\/index\.html$/i, "");
+    return path;
+  }
+
+  function jsxPath() {
+    return extensionRoot().replace(/\//g, "\\\\") + "\\\\jsx\\\\telefederal.jsx";
+  }
+
+  function loadJsx(callback) {
+    var path = jsxPath().replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+    evalPremiere("$.evalFile(\"" + path + "\")", function (result) {
+      jsxLoaded = true;
+      if (callback) callback(result);
+    });
+  }
+
   function runCommand(command, callback) {
     var script = command === "stop"
       ? "telefederalStop()"
       : "telefederalPlay()";
 
-    evalPremiere(script, function (result) {
-      callback(result || "Sin respuesta de Premiere");
-    });
+    function execute() {
+      evalPremiere(script, function (result) {
+        callback(result || "Sin respuesta de Premiere");
+      });
+    }
+
+    if (!jsxLoaded) loadJsx(execute);
+    else execute();
   }
 
   function normalizeCommand(command) {
@@ -98,6 +123,9 @@
     runCommand("stop", log);
   };
 
+  loadJsx(function (result) {
+    log("JSX cargado: " + (result || "OK"));
+  });
   TARGETS.forEach(connect);
   updateStatus();
 }());

@@ -11,6 +11,7 @@ const iceServers = [
 const peers = new Map();
 const tracks = {};
 window.TF_RTC_PUBLISHER = { peers, tracks };
+let captureReady = false;
 const els = {
   status: document.querySelector("#publisherStatus"),
   log: document.querySelector("#publisherLog"),
@@ -149,9 +150,18 @@ function send(socket, message) {
   }
 }
 
+function closePeer(viewerId) {
+  const pc = peers.get(viewerId);
+  if (!pc) return;
+  pc.onconnectionstatechange = null;
+  pc.onicecandidate = null;
+  try { pc.close(); } catch {}
+  peers.delete(viewerId);
+}
+
 async function createPeer(socket, viewerId) {
   if (!tracks.preview || !tracks.program) return;
-  if (peers.has(viewerId)) peers.get(viewerId).close();
+  closePeer(viewerId);
 
   const pc = new RTCPeerConnection({ iceServers });
   peers.set(viewerId, pc);
@@ -163,7 +173,7 @@ async function createPeer(socket, viewerId) {
   };
   pc.onconnectionstatechange = () => {
     if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
-      peers.delete(viewerId);
+      if (peers.get(viewerId) === pc) peers.delete(viewerId);
     }
     setLog(`Paneles conectados: ${peers.size}`);
   };
@@ -181,13 +191,9 @@ async function createPeer(socket, viewerId) {
   });
 }
 
-async function start() {
-  if (!token) {
-    setStatus(false, "Falta token");
-    setLog("Abrir con ?cloud=URL_RENDER&token=BRIDGE_SECRET");
-    return;
-  }
-
+async function ensureCaptureTracks() {
+  if (captureReady && tracks.preview?.readyState === "live" && tracks.program?.readyState === "live") return;
+  captureReady = false;
   const usedDeviceIds = new Set();
   try {
     tracks.preview = await captureVirtualCamera("Preview", previewDeviceName, els.previewVideo, els.previewStats, usedDeviceIds);
@@ -201,13 +207,23 @@ async function start() {
     tracks.program = captureMjpegFallback("Aire", els.programSource, els.programCanvas, els.programStats, "/monitor/program.mjpg");
     setLog(`Aire sin camara virtual: ${error.message}`);
   }
+  captureReady = true;
+}
+
+async function start() {
+  if (!token) {
+    setStatus(false, "Falta token");
+    setLog("Abrir con ?cloud=URL_RENDER&token=BRIDGE_SECRET");
+    return;
+  }
+
+  await ensureCaptureTracks();
 
   const socket = new WebSocket(wsUrl());
   socket.addEventListener("open", () => setStatus(true, "Publicando"));
   socket.addEventListener("close", () => {
     setStatus(false, "Desconectado");
-    peers.forEach((pc) => pc.close());
-    peers.clear();
+    [...peers.keys()].forEach(closePeer);
     setTimeout(start, 2500);
   });
   socket.addEventListener("error", () => setStatus(false, "Error WebRTC"));
@@ -229,8 +245,7 @@ async function start() {
       await peers.get(message.viewerId).addIceCandidate(message.candidate).catch(() => {});
     }
     if (message.type === "viewer-left" && peers.has(message.viewerId)) {
-      peers.get(message.viewerId).close();
-      peers.delete(message.viewerId);
+      closePeer(message.viewerId);
     }
   });
 }

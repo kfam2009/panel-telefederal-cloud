@@ -728,6 +728,15 @@ function selectedPtzInput() {
 }
 function getInput(inputNumber) { return state.inputs.find((input) => input.number === String(inputNumber)); }
 function inputTitle(inputNumber) { return getInput(inputNumber)?.title || `Input ${inputNumber}`; }
+function isOfflineInput(inputNumber) {
+  const input = getInput(inputNumber);
+  if (!input) return false;
+  return input.type === "Placeholder" || /^offline\b/i.test(input.title.trim());
+}
+function assertPlayableInput(inputNumber, actionLabel = "Accion") {
+  if (!isOfflineInput(inputNumber)) return;
+  throw new Error(`${actionLabel}: ${inputTitle(inputNumber)} esta offline en vMix.`);
+}
 function setLog(message) { els.log.textContent = message; }
 function setStatus(online, message) { els.status.textContent = message; els.status.classList.toggle("online", online); els.status.classList.toggle("offline", !online); }
 function selectedZocaloType() {
@@ -2412,6 +2421,7 @@ async function refreshState(includeMonitors = false) {
 }
 
 async function setLayoutPreview(inputNumber) {
+  assertPlayableInput(inputNumber, "Preview");
   setLog(`Enviando a Preview: ${inputTitle(inputNumber)}...`);
   await callVmix({ Function: "PreviewInput", Input: inputNumber });
   state.preview = String(inputNumber);
@@ -2421,6 +2431,7 @@ async function setLayoutPreview(inputNumber) {
 }
 
 async function setLayoutAir(inputNumber) {
+  assertPlayableInput(inputNumber, "Aire");
   setLog(`Enviando al aire: ${inputTitle(inputNumber)}...`);
   await callVmix({ Function: "CutDirect", Input: inputNumber });
   state.active = String(inputNumber);
@@ -2443,6 +2454,8 @@ async function setAudioVolume(inputNumber, value) {
   setLog(`${inputTitle(inputNumber)}: volumen ${value}%.`);
 }
 async function updateCamera(layoutInput, layer, cameraInput) {
+  assertPlayableInput(layoutInput, "Formato");
+  assertPlayableInput(cameraInput, "Camara");
   await callVmix({ Function: "SetMultiViewOverlay", Input: layoutInput, Value: `${layer},${cameraInput}` });
   applyLocalAssignment(layoutInput, layer, cameraInput);
   if (state.preview !== String(layoutInput)) {
@@ -2466,6 +2479,9 @@ async function runPtzCommand(command, value = "") {
 async function runQuickAction(index) {
   const action = (QUICK_ACTIONS[state.activeProject] || [])[Number(index)];
   if (!action) return;
+  if (["CutDirect", "PreviewInput"].includes(action.fn) && action.input && action.input !== "0") {
+    assertPlayableInput(action.input, action.label);
+  }
   if (action.restart && action.input) await callVmix({ Function: "Restart", Input: action.input });
   const params = { Function: action.fn };
   if (action.input) params.Input = action.input;

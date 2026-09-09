@@ -666,7 +666,6 @@ const els = {
   masterDbR: document.querySelector("#masterDbR"),
   premiereControls: document.querySelector("#premiereControls"),
   premiereStatus: document.querySelector("#premiereStatus"),
-  premiereButtons: [...document.querySelectorAll("[data-premiere-action]")],
   quickActions: document.querySelector("#quickActions"),
   formatGrid: document.querySelector("#formatGrid"),
   formatGrids: [...document.querySelectorAll("[data-format-grid]")],
@@ -2913,14 +2912,6 @@ document.addEventListener("click", async (event) => {
   if (projectTab) { state.userSelectedProject = true; setActiveProject(projectTab.dataset.projectTab); return; }
   const panelTab = event.target.closest("[data-panel-tab]");
   if (panelTab) { setActivePanel(panelTab.dataset.panelTab); return; }
-  const premiereAction = event.target.closest("[data-premiere-action]");
-  if (premiereAction) {
-    premiereAction.disabled = true;
-    try { await runPremierePanelAction(premiereAction.dataset.premiereAction); }
-    catch (error) { setLog(error.message); }
-    finally { premiereAction.disabled = false; }
-    return;
-  }
   const quickAction = event.target.closest("[data-quick-action]");
   if (quickAction) {
     quickAction.disabled = true;

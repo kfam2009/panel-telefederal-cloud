@@ -2299,7 +2299,6 @@ function startRtcMonitors() {
     closeCurrentRtc();
     rtcMonitors.enabled = true;
     rtcMonitors.fallback = false;
-    clearRtcStreams();
     useMonitorImages(false);
     const socket = new WebSocket(rtcUrl());
     rtcMonitors.socket = socket;
@@ -2308,21 +2307,27 @@ function startRtcMonitors() {
     const pc = new RTCPeerConnection({ iceServers: window.PANEL_CONFIG?.iceServers || [] });
     rtcMonitors.pc = pc;
 
-    const scheduleReconnect = (delay = 1800) => {
+    const cancelReconnect = () => {
+      if (!rtcMonitors.reconnectTimer) return;
+      clearTimeout(rtcMonitors.reconnectTimer);
+      rtcMonitors.reconnectTimer = null;
+    };
+
+    const scheduleReconnect = (delay = 1800, closeNow = true) => {
       if (rtcMonitors.reconnectTimer) return;
       rtcMonitors.enabled = false;
       rtcMonitors.fallback = false;
-      clearRtcStreams();
       useMonitorImages(false);
       rtcMonitors.reconnectTimer = setTimeout(() => {
         rtcMonitors.reconnectTimer = null;
+        if (!closeNow) closeCurrentRtc();
         connect();
       }, delay);
-      closeCurrentRtc();
+      if (closeNow) closeCurrentRtc();
     };
 
     pc.ontrack = (event) => {
-      if (rtcMonitors.fallbackTimer) {
+      if (rtcMonitors.previewStream && rtcMonitors.programStream && rtcMonitors.fallbackTimer) {
         clearTimeout(rtcMonitors.fallbackTimer);
         rtcMonitors.fallbackTimer = null;
       }
@@ -2333,6 +2338,10 @@ function startRtcMonitors() {
       rtcMonitors.fallback = false;
       useMonitorImages(false);
       setRtcStreams(rtcMonitors.previewStream, rtcMonitors.programStream);
+      if (rtcMonitors.previewStream && rtcMonitors.programStream && rtcMonitors.fallbackTimer) {
+        clearTimeout(rtcMonitors.fallbackTimer);
+        rtcMonitors.fallbackTimer = null;
+      }
     };
     pc.onicecandidate = (event) => {
       if (event.candidate && socket.readyState === WebSocket.OPEN) {
@@ -2340,9 +2349,12 @@ function startRtcMonitors() {
       }
     };
     pc.onconnectionstatechange = () => {
-      if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+      if (["failed", "closed"].includes(pc.connectionState)) {
         scheduleReconnect();
+      } else if (pc.connectionState === "disconnected") {
+        scheduleReconnect(6500, false);
       } else if (pc.connectionState === "connected") {
+        cancelReconnect();
         rtcMonitors.enabled = true;
         rtcMonitors.fallback = false;
         useMonitorImages(false);
@@ -2353,7 +2365,7 @@ function startRtcMonitors() {
       socket.send(JSON.stringify({ type: "viewer-ready" }));
       rtcMonitors.fallbackTimer = setTimeout(() => {
         if (!rtcMonitors.previewStream || !rtcMonitors.programStream) scheduleReconnect();
-      }, 7000);
+      }, 15000);
     });
     socket.addEventListener("message", async (event) => {
       let message;

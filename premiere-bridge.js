@@ -49,22 +49,20 @@ using System;
 using System.Runtime.InteropServices;
 public class NativeWindow {
   [DllImport("user32.dll")]
-  public static extern bool SetForegroundWindow(IntPtr hWnd);
-  [DllImport("user32.dll")]
-  public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 }
 "@
-Add-Type -AssemblyName System.Windows.Forms
 $premiere = Get-Process | Where-Object {
   $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -match 'Premiere Pro' -or $_.ProcessName -match 'Adobe Premiere')
 } | Select-Object -First 1
 if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
-[NativeWindow]::ShowWindowAsync($premiere.MainWindowHandle, 9) | Out-Null
-Start-Sleep -Milliseconds 200
-[NativeWindow]::SetForegroundWindow($premiere.MainWindowHandle) | Out-Null
-Start-Sleep -Milliseconds 250
-[System.Windows.Forms.SendKeys]::SendWait(' ')
-'Play/Pause enviado a ' + $premiere.MainWindowTitle
+$wmKeyDown = 0x0100
+$wmKeyUp = 0x0101
+$vkSpace = 0x20
+[NativeWindow]::PostMessage($premiere.MainWindowHandle, $wmKeyDown, [IntPtr]$vkSpace, [IntPtr]0) | Out-Null
+Start-Sleep -Milliseconds 60
+[NativeWindow]::PostMessage($premiere.MainWindowHandle, $wmKeyUp, [IntPtr]$vkSpace, [IntPtr]0) | Out-Null
+'Play/Pause enviado sin enfocar: ' + $premiere.MainWindowTitle
 `;
   return runPowerShell(script);
 }

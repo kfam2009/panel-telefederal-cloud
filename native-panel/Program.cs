@@ -127,6 +127,8 @@ internal sealed class PanelForm : Form
         {
             var returnHandle = Handle;
             await Task.Run(() => PremiereTransport.Send(action, returnHandle));
+            WindowState = FormWindowState.Maximized;
+            Activate();
             status.Text = action == "play" ? "Premiere Play enviado" : "Premiere Stop enviado";
         }
         catch (Exception ex)
@@ -212,7 +214,6 @@ internal static class PremiereTransport
         }
 
         Thread.Sleep(700);
-        ShowWindow(returnHandle, SW_RESTORE);
         BringWindowToTop(returnHandle);
         SetForegroundWindow(returnHandle);
     }

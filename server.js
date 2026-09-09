@@ -1,6 +1,5 @@
 const http = require("http");
 const https = require("https");
-const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
@@ -10,8 +9,6 @@ const PORT = Number(process.env.PORT || 3000);
 const VMIX_HOST = process.env.VMIX_HOST || "127.0.0.1";
 const VMIX_PORT = Number(process.env.VMIX_PORT || 8088);
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET || "";
-const PANEL_ACCESS_PIN = process.env.PANEL_ACCESS_PIN || BRIDGE_SECRET;
-const PANEL_SESSION_COOKIE = "tf_panel_session";
 const LOCAL_MONITOR_BASE = process.env.LOCAL_MONITOR_BASE || "http://127.0.0.1:3005";
 const IS_REMOTE_VMIX = !["127.0.0.1", "localhost", "::1"].includes(VMIX_HOST.toLowerCase());
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -80,110 +77,6 @@ function send(res, statusCode, body, contentType = "text/plain; charset=utf-8") 
     "Cache-Control": "no-store"
   });
   res.end(body);
-}
-
-function signPanelSession() {
-  return crypto.createHmac("sha256", PANEL_ACCESS_PIN).update("telefederal-panel").digest("hex");
-}
-
-function cookieValue(req, name) {
-  const cookies = String(req.headers.cookie || "").split(";");
-  for (const cookie of cookies) {
-    const [key, ...value] = cookie.trim().split("=");
-    if (key === name) return decodeURIComponent(value.join("=") || "");
-  }
-  return "";
-}
-
-function isPanelAuthenticated(req) {
-  if (!PANEL_ACCESS_PIN) return true;
-  const expected = signPanelSession();
-  const actual = cookieValue(req, PANEL_SESSION_COOKIE);
-  return actual.length === expected.length && crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
-}
-
-function serveLogin(res, failed = false) {
-  send(
-    res,
-    failed ? 401 : 200,
-    `<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TELEFEDERAL - Acceso</title>
-    <style>
-      * { box-sizing: border-box; }
-      html, body { height: 100%; }
-      body { align-items: center; background: #0d1016; color: #f5f7fb; display: grid; font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 24px; }
-      form { background: #171b23; border: 1px solid #394152; display: grid; gap: 14px; justify-self: center; max-width: 360px; padding: 22px; width: 100%; }
-      h1 { font-size: 1.1rem; margin: 0; }
-      label { color: #aeb7c6; display: grid; font-size: .82rem; font-weight: 800; gap: 7px; text-transform: uppercase; }
-      input { background: #101620; border: 1px solid #394152; color: #f5f7fb; font: inherit; min-height: 40px; padding: 0 10px; }
-      button { background: #4ea1ff; border: 0; color: #07111e; cursor: pointer; font: inherit; font-weight: 900; min-height: 40px; }
-      p { color: #ff8b8b; font-size: .84rem; margin: 0; min-height: 18px; }
-    </style>
-  </head>
-  <body>
-    <form method="post" action="/login">
-      <h1>PANEL TELEFEDERAL</h1>
-      <label>Clave de acceso<input name="pin" type="password" autocomplete="current-password" autofocus></label>
-      <button type="submit">Entrar</button>
-      <p>${failed ? "Clave incorrecta." : ""}</p>
-    </form>
-  </body>
-</html>`,
-    "text/html; charset=utf-8"
-  );
-}
-
-function handleLogin(req, res) {
-  if (req.method === "GET") {
-    serveLogin(res);
-    return;
-  }
-
-  if (req.method !== "POST") {
-    send(res, 405, "Metodo no permitido.");
-    return;
-  }
-
-  const chunks = [];
-  let total = 0;
-  req.on("data", (chunk) => {
-    total += chunk.length;
-    if (total > 4096) {
-      req.destroy();
-      return;
-    }
-    chunks.push(chunk);
-  });
-  req.on("end", () => {
-    const body = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
-    const pin = body.get("pin") || "";
-    if (PANEL_ACCESS_PIN && pin !== PANEL_ACCESS_PIN) {
-      serveLogin(res, true);
-      return;
-    }
-
-    res.writeHead(302, {
-      "Set-Cookie": `${PANEL_SESSION_COOKIE}=${encodeURIComponent(signPanelSession())}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
-      "Location": "/",
-      "Cache-Control": "no-store"
-    });
-    res.end();
-  });
-}
-
-function requirePanelAccess(req, res, localRequest) {
-  if (localRequest || isPanelAuthenticated(req)) return true;
-  if (req.method === "GET") {
-    res.writeHead(302, { Location: "/login", "Cache-Control": "no-store" });
-    res.end();
-    return false;
-  }
-  send(res, 401, JSON.stringify({ error: "Acceso no autorizado." }), "application/json; charset=utf-8");
-  return false;
 }
 
 function serveStatic(req, res) {
@@ -886,15 +779,6 @@ function getSharedMonitorStream(monitorName, device) {
 
 const server = http.createServer((req, res) => {
   const localRequest = isLocalRequest(req);
-
-  if (req.url.startsWith("/login")) {
-    handleLogin(req, res);
-    return;
-  }
-
-  if (!requirePanelAccess(req, res, localRequest)) {
-    return;
-  }
 
   if (req.url.startsWith("/panel-config.js")) {
     servePanelConfig(req, res);

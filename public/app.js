@@ -1097,9 +1097,31 @@ function detectProjectFromPreset() {
 }
 
 async function callVmix(params = {}) {
-  const response = await fetch(`/vmix?${new URLSearchParams(params).toString()}`);
-  if (!response.ok) throw new Error((await response.text()) || `HTTP ${response.status}`);
-  return response.text();
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `/vmix?${query}` : "/vmix";
+  return requestText(url);
+}
+
+async function requestText(url) {
+  if (typeof fetch === "function") {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error((await response.text()) || `HTTP ${response.status}`);
+    return response.text();
+  }
+
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("GET", url, true);
+    request.setRequestHeader("Cache-Control", "no-store");
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) resolve(request.responseText);
+      else reject(new Error(request.responseText || `HTTP ${request.status}`));
+    };
+    request.onerror = () => reject(new Error("No pude conectar con vMix."));
+    request.ontimeout = () => reject(new Error("Timeout conectando con vMix."));
+    request.timeout = 10000;
+    request.send();
+  });
 }
 
 function bahiaTimeText() {

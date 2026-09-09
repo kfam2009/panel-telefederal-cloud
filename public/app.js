@@ -1142,6 +1142,11 @@ async function callVmix(params = {}) {
 }
 
 async function callPremiere(action = "play") {
+  if (action === "play" || action === "stop") {
+    window.location.href = `telefederal-premiere://${action}`;
+    return { message: `Premiere ${action === "stop" ? "Stop" : "Play"} enviado por protocolo local.` };
+  }
+
   const response = await fetch(`/premiere/${encodeURIComponent(action)}`, {
     method: "POST",
     cache: "no-store"

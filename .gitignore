@@ -1,0 +1,6 @@
+bin/
+obj/
+publish/
+native-panel/bin/
+native-panel/obj/
+native-panel/publish/

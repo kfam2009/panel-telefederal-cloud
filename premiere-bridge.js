@@ -1,16 +1,20 @@
 const { execFile } = require("child_process");
 
 const CLOUD_URL = process.env.PANEL_CLOUD_URL;
+const PREMIERE_URLS = (process.env.PANEL_PREMIERE_URLS || CLOUD_URL || "")
+  .split(/[;,]/)
+  .map((item) => item.trim())
+  .filter(Boolean);
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET;
 const RECONNECT_MS = 2500;
 
-if (!CLOUD_URL || !BRIDGE_SECRET) {
-  console.error("Faltan PANEL_CLOUD_URL o BRIDGE_SECRET.");
+if (!PREMIERE_URLS.length || !BRIDGE_SECRET) {
+  console.error("Faltan PANEL_CLOUD_URL/PANEL_PREMIERE_URLS o BRIDGE_SECRET.");
   process.exit(1);
 }
 
-function wsUrl() {
-  const url = new URL(CLOUD_URL);
+function wsUrl(baseUrl) {
+  const url = new URL(baseUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.pathname = "/premiere";
   url.search = `?token=${encodeURIComponent(BRIDGE_SECRET)}`;
@@ -85,11 +89,42 @@ foreach ($target in $targets) {
   return runPowerShell(script);
 }
 
-function connect() {
-  const socket = new WebSocket(wsUrl());
+async function playToggleFocus() {
+  const script = `
+$ErrorActionPreference = 'Stop'
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class NativeWindow {
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")]
+  public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+"@
+$premiere = Get-Process | Where-Object {
+  $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -match 'Premiere Pro' -or $_.ProcessName -match 'Adobe Premiere')
+} | Select-Object -First 1
+if (-not $premiere) { throw 'No encuentro una ventana abierta de Adobe Premiere Pro.' }
+$previous = [NativeWindow]::GetForegroundWindow()
+[NativeWindow]::SetForegroundWindow($premiere.MainWindowHandle) | Out-Null
+Start-Sleep -Milliseconds 180
+$shell = New-Object -ComObject WScript.Shell
+$shell.SendKeys(' ')
+Start-Sleep -Milliseconds 120
+if ($previous -ne [IntPtr]::Zero -and $previous -ne $premiere.MainWindowHandle) {
+  [NativeWindow]::SetForegroundWindow($previous) | Out-Null
+}
+'Play/Pause enviado enfocando momentaneamente Premiere: ' + $premiere.MainWindowTitle
+`;
+  return runPowerShell(script);
+}
+
+function connect(baseUrl) {
+  const socket = new WebSocket(wsUrl(baseUrl));
 
   socket.addEventListener("open", () => {
-    console.log(`Bridge Premiere conectado a ${CLOUD_URL}`);
+    console.log(`Bridge Premiere conectado a ${baseUrl}`);
   });
 
   socket.addEventListener("message", async (event) => {
@@ -104,7 +139,9 @@ function connect() {
 
     const result = message.command === "playToggle"
       ? await playToggle()
-      : { ok: false, error: `Comando no soportado: ${message.command}` };
+      : message.command === "playToggleFocus"
+        ? await playToggleFocus()
+        : { ok: false, error: `Comando no soportado: ${message.command}` };
 
     const stamp = new Date().toISOString();
     console.log(`${stamp} Premiere ${result.ok ? result.message : result.error}`);
@@ -112,8 +149,8 @@ function connect() {
   });
 
   socket.addEventListener("close", () => {
-    console.log("Bridge Premiere desconectado. Reintentando...");
-    setTimeout(connect, RECONNECT_MS);
+    console.log(`Bridge Premiere desconectado de ${baseUrl}. Reintentando...`);
+    setTimeout(() => connect(baseUrl), RECONNECT_MS);
   });
 
   socket.addEventListener("error", () => {
@@ -121,4 +158,4 @@ function connect() {
   });
 }
 
-connect();
+PREMIERE_URLS.forEach(connect);

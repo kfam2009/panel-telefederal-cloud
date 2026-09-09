@@ -101,18 +101,28 @@ function serveStatic(req, res) {
   });
 }
 
-function servePanelConfig(res) {
+function isLocalRequest(req) {
+  const host = (req.headers.host || "").split(":")[0].toLowerCase();
+  return ["127.0.0.1", "localhost", "::1", "[::1]"].includes(host);
+}
+
+function servePanelConfig(req, res) {
   const iceServers = [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" }
   ];
+  const localPanel = isLocalRequest(req);
 
   send(
     res,
     200,
     `window.PANEL_CONFIG = ${JSON.stringify({
-      monitorBase: BRIDGE_SECRET ? "" : LOCAL_MONITOR_BASE,
-      monitorMode: BRIDGE_SECRET ? "webrtc" : "mjpg",
+      monitorBase: BRIDGE_SECRET || localPanel ? "" : LOCAL_MONITOR_BASE,
+      monitorMode: localPanel ? "localcam" : BRIDGE_SECRET ? "webrtc" : "mjpg",
+      monitorDevices: MONITOR_DEVICES,
+      monitorFps: MONITOR_FPS,
+      monitorWidth: MONITOR_WIDTH,
+      monitorHeight: MONITOR_HEIGHT,
       rtcPath: "/rtc",
       iceServers
     })};`,
@@ -164,7 +174,9 @@ function sendPremiereCommand(req, res) {
   }, 5000);
 
   premiereRequests.set(requestId, { res, timeout });
-  premiere.send(JSON.stringify({ type: "premiere-command", id: requestId, command: "playToggle" }));
+  const requestPath = new URL(req.url, `http://${req.headers.host}`).pathname;
+  const command = requestPath.includes("play-focus") ? "playToggleFocus" : "playToggle";
+  premiere.send(JSON.stringify({ type: "premiere-command", id: requestId, command }));
 }
 
 function completePremiereRequest(message) {
@@ -763,7 +775,7 @@ function getSharedMonitorStream(monitorName, device) {
 
 const server = http.createServer((req, res) => {
   if (req.url.startsWith("/panel-config.js")) {
-    servePanelConfig(res);
+    servePanelConfig(req, res);
     return;
   }
 

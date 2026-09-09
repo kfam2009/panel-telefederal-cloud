@@ -544,7 +544,7 @@ const QUICK_ACTIONS = {
 };
 
 const GLOBAL_QUICK_ACTIONS = [
-  { label: "Premiere Play", kind: "premiere", command: "playToggle" }
+  { label: "Premiere Play", kind: "premiere", command: "playToggleFocus" }
 ];
 
 const PUBLICIDAD_ACTIONS = {
@@ -649,6 +649,12 @@ const rtcMonitors = {
   videos: {}
 };
 window.TF_RTC = rtcMonitors;
+const localCameraMonitors = {
+  started: false,
+  starting: false,
+  streams: {}
+};
+window.TF_LOCAL_MONITORS = localCameraMonitors;
 const els = {
   status: document.querySelector("#connectionStatus"),
   masterMeterL: document.querySelector("#masterMeterL"),
@@ -2209,6 +2215,10 @@ function createMonitorVideo(image, name) {
   return video;
 }
 
+function isLocalCameraMonitorMode() {
+  return window.PANEL_CONFIG?.monitorMode === "localcam";
+}
+
 function watchRtcVideo(video) {
   const onFrame = () => {
     rtcMonitors.lastFrameAt = Date.now();
@@ -2247,6 +2257,69 @@ function setRtcStreams(previewStream, programStream) {
   });
 }
 
+function matchVideoDevice(devices, requestedName, usedDeviceIds = new Set()) {
+  const videoDevices = devices.filter((device) => device.kind === "videoinput");
+  const normalized = (requestedName || "").trim().toLowerCase();
+  const exact = videoDevices.find((device) => !usedDeviceIds.has(device.deviceId) && device.label.trim().toLowerCase() === normalized);
+  if (exact) return exact;
+  const partial = videoDevices.find((device) => !usedDeviceIds.has(device.deviceId) && normalized && device.label.toLowerCase().includes(normalized));
+  if (partial) return partial;
+  return videoDevices.find((device) => !usedDeviceIds.has(device.deviceId)) || videoDevices[0];
+}
+
+async function unlockVideoDeviceLabels() {
+  if (!navigator.mediaDevices?.getUserMedia || !navigator.mediaDevices?.enumerateDevices) return;
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  if (devices.some((device) => device.kind === "videoinput" && device.label)) return;
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+  stream.getTracks().forEach((track) => track.stop());
+}
+
+async function captureLocalMonitor(kind, requestedName, usedDeviceIds) {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const device = matchVideoDevice(devices, requestedName, usedDeviceIds);
+  if (!device) throw new Error(`No encuentro camara virtual para ${kind}.`);
+  usedDeviceIds.add(device.deviceId);
+  return navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: {
+      deviceId: { exact: device.deviceId },
+      width: { ideal: window.PANEL_CONFIG?.monitorWidth || 640 },
+      height: { ideal: window.PANEL_CONFIG?.monitorHeight || 360 },
+      frameRate: { ideal: window.PANEL_CONFIG?.monitorFps || 25, max: 30 }
+    }
+  });
+}
+
+async function startLocalCameraMonitors() {
+  if (!isLocalCameraMonitorMode() || localCameraMonitors.started || localCameraMonitors.starting) return;
+  if (!navigator.mediaDevices?.getUserMedia || !navigator.mediaDevices?.enumerateDevices) {
+    setLog("Monitores: este navegador no permite tomar las camaras virtuales.");
+    return;
+  }
+
+  localCameraMonitors.starting = true;
+  ensureRtcVideos();
+  useMonitorImages(false);
+  try {
+    await unlockVideoDeviceLabels();
+    const usedDeviceIds = new Set();
+    const devices = window.PANEL_CONFIG?.monitorDevices || {};
+    const previewStream = await captureLocalMonitor("Preview", devices.preview || "vMix Video External 2", usedDeviceIds);
+    const programStream = await captureLocalMonitor("Aire", devices.program || "vMix Video", usedDeviceIds);
+    localCameraMonitors.streams.preview = previewStream;
+    localCameraMonitors.streams.program = programStream;
+    setRtcStreams(previewStream, programStream);
+    localCameraMonitors.started = true;
+    setLog("Monitores locales directos desde vMix activos.");
+  } catch (error) {
+    useMonitorImages(true);
+    setLog(`Monitores locales: ${error.message}`);
+  } finally {
+    localCameraMonitors.starting = false;
+  }
+}
+
 function clearRtcStreams() {
   rtcMonitors.previewStream = null;
   rtcMonitors.programStream = null;
@@ -2273,6 +2346,12 @@ function useMonitorImages(useImages) {
 }
 
 function activateMonitorFallback() {
+  if (isLocalCameraMonitorMode()) {
+    rtcMonitors.fallback = false;
+    rtcMonitors.enabled = false;
+    useMonitorImages(false);
+    return;
+  }
   if (window.PANEL_CONFIG?.monitorMode === "webrtc" && !window.PANEL_CONFIG?.monitorBase) {
     rtcMonitors.fallback = false;
     rtcMonitors.enabled = false;
@@ -2287,6 +2366,10 @@ function activateMonitorFallback() {
 }
 
 function startRtcMonitors() {
+  if (isLocalCameraMonitorMode()) {
+    startLocalCameraMonitors();
+    return;
+  }
   if (rtcMonitors.started || window.PANEL_CONFIG?.monitorMode !== "webrtc") return;
   rtcMonitors.started = true;
   rtcMonitors.enabled = true;
@@ -2611,8 +2694,9 @@ async function runQuickAction(index) {
   if (!action) return;
   if (action.kind === "premiere") {
     setLog("Enviando Play/Pause a Premiere...");
-    await callPremiere("play");
-    setLog("Premiere: Play/Pause enviado.");
+    const endpoint = action.command === "playToggleFocus" ? "play-focus" : "play";
+    const result = await callPremiere(endpoint);
+    setLog(`Premiere: ${result.message || "comando enviado."}`);
     return;
   }
   if (["CutDirect", "PreviewInput"].includes(action.fn) && action.input && action.input !== "0") {

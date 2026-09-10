@@ -296,7 +296,7 @@ const PROJECTS = {
     help: "Multiviews de TeleFederal. El video queda fijo y la Call 76 se puede elegir como camara.",
     defaultLayout: "12",
     defaultPtz: "26",
-    zowitekInput: "68",
+    zowitekInput: "76",
     cameras: [
       { input: "1", label: "C1" },
       { input: "2", label: "C2" },
@@ -304,7 +304,7 @@ const PROJECTS = {
       { input: "4", label: "C4" },
       { input: "5", label: "C5" },
       { input: "6", label: "C6" },
-      { input: "68", label: "Zowitek" },
+      { input: "76", label: "Zowitek" },
       { input: "26", label: "PTZ" },
       { input: "76", label: "Call" }
     ],
@@ -492,7 +492,7 @@ const QUICK_ACTIONS = {
     { label: "Camara 4", fn: "CutDirect", input: "4" },
     { label: "Camara 5", fn: "CutDirect", input: "5" },
     { label: "Camara 6", fn: "CutDirect", input: "6" },
-    { label: "Zowitek", fn: "CutDirect", input: "68" },
+    { label: "Zowitek", fn: "CutDirect", input: "76" },
     { label: "PTZ desde Previo", fn: "CutDirect", input: "0" },
     { label: "Video", fn: "CutDirect", input: "15" },
     { label: "Call", fn: "CutDirect", input: "76" },

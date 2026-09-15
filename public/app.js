@@ -633,7 +633,7 @@ const state = {
 };
 
 const PROJECT_BY_ROUTE = {
-  "/telefederal": "telefederal"
+  "/panelgo/telefederal": "telefederal"
 };
 
 const routeProject = PROJECT_BY_ROUTE[window.location.pathname.replace(/\/+$/, "")];

@@ -293,7 +293,7 @@ const PROJECTS = {
   },
   telefederal: {
     name: "TELEFEDERAL",
-    help: "Multiviews de TeleFederal. El video queda fijo y la Call 76 se puede elegir como camara.",
+    help: "Multiviews del proyecto. El video queda fijo y la Call 76 se puede elegir como camara.",
     defaultLayout: "12",
     defaultPtz: "26",
     zowitekInput: "76",

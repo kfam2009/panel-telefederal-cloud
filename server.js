@@ -274,6 +274,15 @@ function dispatchLu2BridgeCommands() {
   }
 }
 
+function clearLu2BridgeBacklog(reason) {
+  lu2BridgeQueue.splice(0, lu2BridgeQueue.length);
+  lu2BridgePending.forEach((pending) => {
+    clearTimeout(pending.timeout);
+    pending.reject(new Error(reason));
+  });
+  lu2BridgePending.clear();
+}
+
 function enqueueLu2BridgeCommand(pathname) {
   return new Promise((resolve, reject) => {
     const id = String(++lu2BridgeCommandId);
@@ -353,6 +362,7 @@ async function getLu2BahiaWeatherData() {
 
 async function refreshLu2ClockWeatherInput() {
   if (!lu2BridgeLastSeenAt || Date.now() - lu2BridgeLastSeenAt > 45000) return;
+  if (lu2BridgeQueue.length || lu2BridgePending.size) return;
 
   let temperature = lu2LastClockWeatherTemperature;
 
@@ -391,6 +401,7 @@ async function refreshLu2ClockWeatherInput() {
 
 async function enforceLu2ClockWeatherFields() {
   if (!lu2BridgeLastSeenAt || Date.now() - lu2BridgeLastSeenAt > 45000) return;
+  if (lu2BridgeQueue.length || lu2BridgePending.size) return;
 
   try {
     const vmixXml = await getLu2VmixXml();
@@ -439,6 +450,11 @@ async function enforceLu2ClockWeatherFields() {
 }
 
 function serveLu2BridgePoll(req, res) {
+  const wasDisconnected = !lu2BridgeLastSeenAt || Date.now() - lu2BridgeLastSeenAt > 45000;
+  if (wasDisconnected && (lu2BridgeQueue.length || lu2BridgePending.size)) {
+    clearLu2BridgeBacklog("Bridge LU2 reconectado; se limpio la cola anterior.");
+  }
+
   lu2BridgeLastSeenAt = Date.now();
 
   if (lu2BridgeQueue.length) {

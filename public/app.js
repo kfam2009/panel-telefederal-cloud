@@ -633,7 +633,6 @@ const state = {
 };
 
 const PROJECT_BY_ROUTE = {
-  "/panelgo/telefederal": "telefederal",
   "/telefederal": "telefederal"
 };
 

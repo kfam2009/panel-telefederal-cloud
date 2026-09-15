@@ -15,6 +15,32 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const LU2_PUBLIC_DIR = path.join(PUBLIC_DIR, "lu2exteriores");
 const LU2_ZOCALO_DATA_PATH = path.join(__dirname, "lu2-zocalos-data.json");
 const LU2_ZOCALO_BACKUP_PATH = path.join(__dirname, "lu2-zocalos-data.backup.json");
+const LU2_CLOCK_WEATHER_INPUT = "59";
+const LU2_CLOCK_WEATHER_OVERLAY_SLOT = "3";
+const LU2_CLOCK_WEATHER_FIELD = "TextBlock1.Text";
+const LU2_CLOCK_WEATHER_EXTRA_FIELD = "TextBlock2.Text";
+const LU2_CLOCK_WEATHER_INTERVAL_MS = 3000;
+const LU2_PROGRAM_NAME_FIELDS = ["TextBlock1.Text", "TextBlock2.Text"];
+const LU2_PROGRAM_NAME_DEFAULTS = {
+  "60": "PANORAMA",
+  "61": "ESTÁ TODO\nINVENTADO",
+  "62": "TODO CAMPO",
+  "63": "A LAS CHAPAS",
+  "64": "ALLICA Y PRIETA",
+  "65": "CIAO ITALIA",
+  "66": "DUPLEX",
+  "67": "ENTRETIEMPO",
+  "68": "HERENCIA CRIOLLA",
+  "69": "MÚSICA",
+  "70": "NOCHE A NOCHE",
+  "71": "NOTICIAS EN COMPAÑÍA",
+  "72": "RADIOVISIÓN\nDEPORTIVA",
+  "73": "LECTURA\nLA NUEVA",
+  "74": "EL EXPRESO",
+  "75": "LU2 AM FM",
+  "76": "LA VOZ DEL CAMPO",
+  "77": "INFORME DOS"
+};
 const FFMPEG_PATH = resolveFfmpegPath();
 const PREVIEW_SNAPSHOT_PATH = path.join(__dirname, "preview-live.jpg");
 const PROGRAM_SNAPSHOT_PATH = path.join(__dirname, "program-live.jpg");
@@ -46,6 +72,9 @@ let lu2BridgeLastSeenAt = 0;
 const lu2BridgeQueue = [];
 const lu2BridgePollers = [];
 const lu2BridgePending = new Map();
+let lu2LastClockWeatherTemperature = "";
+let lu2LastSentClockText = "";
+let lu2LastSentTemperatureText = "";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -259,6 +288,156 @@ function enqueueLu2BridgeCommand(pathname) {
   });
 }
 
+async function callLu2BridgeApi(apiPath) {
+  await enqueueLu2BridgeCommand(apiPath);
+}
+
+async function getLu2VmixXml() {
+  const result = await enqueueLu2BridgeCommand("/api/");
+  return result.body.toString("utf8");
+}
+
+function decodeXmlText(value = "") {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function textFieldFromInputXml(inputXml, fieldName) {
+  const escapedName = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const fieldPattern = new RegExp(`<text[^>]*name=["']${escapedName}["'][^>]*>([\\s\\S]*?)<\\/text>`);
+  return decodeXmlText(inputXml.match(fieldPattern)?.[1] || "").trim();
+}
+
+function isLu2ClockOrTemperatureText(value = "") {
+  const normalized = value.trim();
+  return /^\d{1,2}:\d{2}(?::\d{2})?$/.test(normalized)
+    || /^-?\d+(?:[.,]\d+)?\s*°\s*C$/i.test(normalized)
+    || /^\d{1,2}:\d{2}\s+-?\d+(?:[.,]\d+)?\s*°\s*C$/i.test(normalized);
+}
+
+function bahiaTimeText() {
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(new Date());
+}
+
+async function getLu2BahiaWeatherData() {
+  const now = Date.now();
+  if (bahiaWeatherCache.data && now - bahiaWeatherCache.at < 180000) {
+    return bahiaWeatherCache.data;
+  }
+
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=-38.7196&longitude=-62.2724&current=temperature_2m,weather_code&timezone=America%2FArgentina%2FBuenos_Aires";
+  const weather = await getJson(url);
+  const data = {
+    temperature: Number(weather.current?.temperature_2m),
+    weatherCode: Number(weather.current?.weather_code),
+    unit: weather.current_units?.temperature_2m || "°C",
+    observedAt: weather.current?.time || ""
+  };
+
+  if (!Number.isFinite(data.temperature)) {
+    throw new Error("Temperatura invalida");
+  }
+
+  bahiaWeatherCache = { at: now, data };
+  return data;
+}
+
+async function refreshLu2ClockWeatherInput() {
+  if (!lu2BridgeLastSeenAt || Date.now() - lu2BridgeLastSeenAt > 45000) return;
+
+  let temperature = lu2LastClockWeatherTemperature;
+
+  try {
+    const weather = await getLu2BahiaWeatherData();
+    const roundedTemperature = Math.round(Number(weather.temperature) * 10) / 10;
+    const temperatureText = Number.isInteger(roundedTemperature)
+      ? String(roundedTemperature)
+      : roundedTemperature.toFixed(1);
+    temperature = `${temperatureText} °C`;
+    lu2LastClockWeatherTemperature = temperature;
+  } catch {}
+
+  const clockText = bahiaTimeText();
+
+  try {
+    if (clockText !== lu2LastSentClockText) {
+      await callLu2BridgeApi(`/api/?Function=SetText&Input=${LU2_CLOCK_WEATHER_INPUT}&SelectedName=${encodeURIComponent(LU2_CLOCK_WEATHER_FIELD)}&Value=${encodeURIComponent(clockText)}`);
+      lu2LastSentClockText = clockText;
+    }
+
+    if (temperature && temperature !== lu2LastSentTemperatureText) {
+      await callLu2BridgeApi(`/api/?Function=SetText&Input=${LU2_CLOCK_WEATHER_INPUT}&SelectedName=${encodeURIComponent(LU2_CLOCK_WEATHER_EXTRA_FIELD)}&Value=${encodeURIComponent(temperature)}`);
+      lu2LastSentTemperatureText = temperature;
+    }
+
+    const vmixXml = await getLu2VmixXml();
+    const overlayPattern = new RegExp(`<overlay\\s+number=["']${LU2_CLOCK_WEATHER_OVERLAY_SLOT}["'][^>]*>([^<]*)<\\/overlay>`);
+    const currentOverlayInput = vmixXml.match(overlayPattern)?.[1]?.trim() || "";
+
+    if (currentOverlayInput !== LU2_CLOCK_WEATHER_INPUT) {
+      await callLu2BridgeApi(`/api/?Function=OverlayInput${LU2_CLOCK_WEATHER_OVERLAY_SLOT}In&Input=${LU2_CLOCK_WEATHER_INPUT}`);
+    }
+  } catch {}
+}
+
+async function enforceLu2ClockWeatherFields() {
+  if (!lu2BridgeLastSeenAt || Date.now() - lu2BridgeLastSeenAt > 45000) return;
+
+  try {
+    const vmixXml = await getLu2VmixXml();
+    const inputPattern = new RegExp(`<input[^>]*number=["']${LU2_CLOCK_WEATHER_INPUT}["'][^>]*>([\\s\\S]*?)<\\/input>`);
+    const inputXml = vmixXml.match(inputPattern)?.[0] || "";
+
+    if (inputXml) {
+      const currentClock = textFieldFromInputXml(inputXml, LU2_CLOCK_WEATHER_FIELD);
+      const currentTemperature = textFieldFromInputXml(inputXml, LU2_CLOCK_WEATHER_EXTRA_FIELD);
+      const recoveredTemperature =
+        currentTemperature.match(/-?\d+(?:[.,]\d+)?\s*°C/)?.[0] ||
+        currentClock.match(/-?\d+(?:[.,]\d+)?\s*°C/)?.[0] ||
+        lu2LastClockWeatherTemperature;
+      const expectedClock = bahiaTimeText();
+
+      if (recoveredTemperature) {
+        lu2LastClockWeatherTemperature = recoveredTemperature;
+      }
+
+      if (currentClock !== expectedClock) {
+        await callLu2BridgeApi(`/api/?Function=SetText&Input=${LU2_CLOCK_WEATHER_INPUT}&SelectedName=${encodeURIComponent(LU2_CLOCK_WEATHER_FIELD)}&Value=${encodeURIComponent(expectedClock)}`);
+        lu2LastSentClockText = expectedClock;
+      }
+
+      if (lu2LastClockWeatherTemperature && currentTemperature !== lu2LastClockWeatherTemperature) {
+        await callLu2BridgeApi(`/api/?Function=SetText&Input=${LU2_CLOCK_WEATHER_INPUT}&SelectedName=${encodeURIComponent(LU2_CLOCK_WEATHER_EXTRA_FIELD)}&Value=${encodeURIComponent(lu2LastClockWeatherTemperature)}`);
+        lu2LastSentTemperatureText = lu2LastClockWeatherTemperature;
+      }
+    }
+
+    for (const [programInput, expectedName] of Object.entries(LU2_PROGRAM_NAME_DEFAULTS)) {
+      const programPattern = new RegExp(`<input[^>]*number=["']${programInput}["'][^>]*>([\\s\\S]*?)<\\/input>`);
+      const programXml = vmixXml.match(programPattern)?.[0] || "";
+
+      if (!programXml) continue;
+
+      for (const fieldName of LU2_PROGRAM_NAME_FIELDS) {
+        const currentValue = textFieldFromInputXml(programXml, fieldName);
+
+        if (isLu2ClockOrTemperatureText(currentValue)) {
+          await callLu2BridgeApi(`/api/?Function=SetText&Input=${programInput}&SelectedName=${encodeURIComponent(fieldName)}&Value=${encodeURIComponent(expectedName)}`);
+        }
+      }
+    }
+  } catch {}
+}
+
 function serveLu2BridgePoll(req, res) {
   lu2BridgeLastSeenAt = Date.now();
 
@@ -324,7 +503,33 @@ function serveLu2BridgeStatus(req, res) {
 
 function proxyLu2Vmix(req, res) {
   const incomingUrl = new URL(req.url, `http://${req.headers.host}`);
-  const vmixPath = `/api/?${incomingUrl.searchParams.toString()}`;
+  const query = incomingUrl.searchParams;
+  const functionName = query.get("Function");
+  const inputNumber = query.get("Input");
+  const selectedName = query.get("SelectedName");
+  const value = query.get("Value") || "";
+
+  const isLegacyClockUpdate =
+    functionName === "SetText" &&
+    (inputNumber === LU2_CLOCK_WEATHER_INPUT || inputNumber === "60") &&
+    (selectedName === LU2_CLOCK_WEATHER_FIELD || selectedName === LU2_CLOCK_WEATHER_EXTRA_FIELD) &&
+    (/^\d{1,2}:\d{2}(\s+\d+\s*°C)?$/.test(value) || /^\d+\s*°C$/.test(value) || value === "");
+
+  if (isLegacyClockUpdate) {
+    send(res, 200, "");
+    return;
+  }
+
+  if (
+    functionName === "SetText" &&
+    inputNumber === "60" &&
+    (selectedName === "TextBlock1.Text" || selectedName === "TextBlock2.Text") &&
+    (/^\d{1,2}:\d{2}(\s+\d+\s*°C)?$/.test(value) || /^\d+\s*°C$/.test(value) || value === "")
+  ) {
+    query.set("Input", LU2_CLOCK_WEATHER_INPUT);
+  }
+
+  const vmixPath = `/api/?${query.toString()}`;
 
   enqueueLu2BridgeCommand(vmixPath)
     .then((result) => {
@@ -1311,4 +1516,7 @@ server.on("upgrade", (req, socket, head) => {
 server.listen(PORT, () => {
   console.log(`Panel vMix: http://localhost:${PORT}`);
   console.log(`API vMix: http://${VMIX_HOST}:${VMIX_PORT}/api/`);
+  setTimeout(enforceLu2ClockWeatherFields, 500);
+  setInterval(enforceLu2ClockWeatherFields, 1000);
+  setInterval(refreshLu2ClockWeatherInput, LU2_CLOCK_WEATHER_INTERVAL_MS);
 });

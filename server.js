@@ -12,6 +12,9 @@ const BRIDGE_SECRET = process.env.BRIDGE_SECRET || "";
 const LOCAL_MONITOR_BASE = process.env.LOCAL_MONITOR_BASE || "http://127.0.0.1:3005";
 const IS_REMOTE_VMIX = !["127.0.0.1", "localhost", "::1"].includes(VMIX_HOST.toLowerCase());
 const PUBLIC_DIR = path.join(__dirname, "public");
+const LU2_PUBLIC_DIR = path.join(PUBLIC_DIR, "lu2exteriores");
+const LU2_ZOCALO_DATA_PATH = path.join(__dirname, "lu2-zocalos-data.json");
+const LU2_ZOCALO_BACKUP_PATH = path.join(__dirname, "lu2-zocalos-data.backup.json");
 const FFMPEG_PATH = resolveFfmpegPath();
 const PREVIEW_SNAPSHOT_PATH = path.join(__dirname, "preview-live.jpg");
 const PROGRAM_SNAPSHOT_PATH = path.join(__dirname, "program-live.jpg");
@@ -38,6 +41,11 @@ const rtcViewers = new Map();
 let rtcPublisher = null;
 const premiereClients = new Set();
 const premiereRequests = new Map();
+let lu2BridgeCommandId = 0;
+let lu2BridgeLastSeenAt = 0;
+const lu2BridgeQueue = [];
+const lu2BridgePollers = [];
+const lu2BridgePending = new Map();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -105,6 +113,275 @@ function serveStatic(req, res) {
     const ext = path.extname(filePath);
     send(res, 200, data, MIME_TYPES[ext] || "application/octet-stream");
   });
+}
+
+function requestPathname(req) {
+  return new URL(req.url, `http://${req.headers.host}`).pathname;
+}
+
+function lu2Pathname(req) {
+  const pathname = requestPathname(req);
+  if (pathname === "/lu2exteriores") return "/";
+  if (pathname.startsWith("/lu2exteriores/")) return pathname.slice("/lu2exteriores".length) || "/";
+  return pathname;
+}
+
+function serveLu2Static(req, res) {
+  const requestPath = lu2Pathname(req);
+  const relativePath = requestPath === "/" ? "index.html" : requestPath.replace(/^\/+/, "");
+  const safePath = path.normalize(relativePath).replace(/^(\.\.[/\\])+/, "");
+  const filePath = path.join(LU2_PUBLIC_DIR, safePath);
+
+  if (!filePath.startsWith(LU2_PUBLIC_DIR)) {
+    send(res, 403, "Forbidden");
+    return;
+  }
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      send(res, 404, "Not found");
+      return;
+    }
+
+    const ext = path.extname(filePath);
+    send(res, 200, data, MIME_TYPES[ext] || "application/octet-stream");
+  });
+}
+
+function readJsonBody(req, maxBytes = 2 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        reject(new Error("El contenido es demasiado grande."));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}"));
+      } catch {
+        reject(new Error("JSON invalido."));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+function readLu2ZocaloData() {
+  if (!fs.existsSync(LU2_ZOCALO_DATA_PATH)) return null;
+  const data = JSON.parse(fs.readFileSync(LU2_ZOCALO_DATA_PATH, "utf8"));
+  return data && data.profiles && typeof data.profiles === "object" ? data : null;
+}
+
+function writeLu2ZocaloData(data) {
+  const temporaryPath = `${LU2_ZOCALO_DATA_PATH}.tmp`;
+  if (fs.existsSync(LU2_ZOCALO_DATA_PATH)) {
+    fs.copyFileSync(LU2_ZOCALO_DATA_PATH, LU2_ZOCALO_BACKUP_PATH);
+  }
+  fs.writeFileSync(temporaryPath, JSON.stringify(data, null, 2), "utf8");
+  fs.renameSync(temporaryPath, LU2_ZOCALO_DATA_PATH);
+}
+
+async function serveLu2Zocalos(req, res) {
+  try {
+    if (req.method === "GET") {
+      const data = readLu2ZocaloData();
+      send(res, data ? 200 : 404, JSON.stringify(data || { error: "Sin datos centrales" }), "application/json; charset=utf-8");
+      return;
+    }
+
+    if (req.method !== "PUT") {
+      send(res, 405, JSON.stringify({ error: "Metodo no permitido" }), "application/json; charset=utf-8");
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const allowedProfiles = ["general", "panorama", "inventado", "duplex", "noticias"];
+    if (!allowedProfiles.includes(body.profile) || !Array.isArray(body.items)) {
+      send(res, 400, JSON.stringify({ error: "Perfil o lista invalida" }), "application/json; charset=utf-8");
+      return;
+    }
+
+    const cleanItems = body.items
+      .filter((item) => item && typeof item === "object" && item.id && item.type && item.line)
+      .map((item) => ({ id: String(item.id), type: String(item.type), line: String(item.line), text: String(item.text || "") }));
+    let data = readLu2ZocaloData();
+    if (!data) {
+      data = { version: 1, profiles: {} };
+      allowedProfiles.forEach((profile) => {
+        data.profiles[profile] = cleanItems.map((item) => ({ ...item }));
+      });
+    }
+    data.profiles[body.profile] = cleanItems;
+    data.updatedAt = new Date().toISOString();
+    writeLu2ZocaloData(data);
+    send(res, 200, JSON.stringify(data), "application/json; charset=utf-8");
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: "No pude guardar los zocalos" }), "application/json; charset=utf-8");
+  }
+}
+
+function lu2BridgeStatusPayload() {
+  return {
+    mode: "bridge",
+    connected: Boolean(lu2BridgeLastSeenAt && Date.now() - lu2BridgeLastSeenAt < 45000),
+    lastSeenAt: lu2BridgeLastSeenAt ? new Date(lu2BridgeLastSeenAt).toISOString() : null,
+    queued: lu2BridgeQueue.length,
+    pending: lu2BridgePending.size
+  };
+}
+
+function dispatchLu2BridgeCommands() {
+  while (lu2BridgeQueue.length && lu2BridgePollers.length) {
+    const command = lu2BridgeQueue.shift();
+    const poller = lu2BridgePollers.shift();
+    clearTimeout(poller.timer);
+    send(poller.res, 200, JSON.stringify(command), "application/json; charset=utf-8");
+  }
+}
+
+function enqueueLu2BridgeCommand(pathname) {
+  return new Promise((resolve, reject) => {
+    const id = String(++lu2BridgeCommandId);
+    const timeout = setTimeout(() => {
+      lu2BridgePending.delete(id);
+      reject(new Error("Bridge vMix timeout"));
+    }, 12000);
+
+    lu2BridgePending.set(id, { resolve, reject, timeout });
+    lu2BridgeQueue.push({ id, path: pathname });
+    dispatchLu2BridgeCommands();
+  });
+}
+
+function serveLu2BridgePoll(req, res) {
+  lu2BridgeLastSeenAt = Date.now();
+
+  if (lu2BridgeQueue.length) {
+    const command = lu2BridgeQueue.shift();
+    send(res, 200, JSON.stringify(command), "application/json; charset=utf-8");
+    return;
+  }
+
+  const poller = {
+    res,
+    timer: setTimeout(() => {
+      const index = lu2BridgePollers.indexOf(poller);
+      if (index >= 0) lu2BridgePollers.splice(index, 1);
+      send(res, 204, "");
+    }, 25000)
+  };
+
+  lu2BridgePollers.push(poller);
+  req.on("close", () => {
+    const index = lu2BridgePollers.indexOf(poller);
+    if (index >= 0) {
+      clearTimeout(poller.timer);
+      lu2BridgePollers.splice(index, 1);
+    }
+  });
+}
+
+async function serveLu2BridgeResult(req, res) {
+  lu2BridgeLastSeenAt = Date.now();
+
+  try {
+    const body = await readJsonBody(req);
+    const pending = lu2BridgePending.get(String(body.id || ""));
+
+    if (!pending) {
+      send(res, 404, JSON.stringify({ error: "Comando no encontrado" }), "application/json; charset=utf-8");
+      return;
+    }
+
+    lu2BridgePending.delete(String(body.id));
+    clearTimeout(pending.timeout);
+
+    if (body.error) {
+      pending.reject(new Error(String(body.error)));
+    } else {
+      pending.resolve({
+        statusCode: Number(body.statusCode || 200),
+        contentType: String(body.contentType || "text/xml; charset=utf-8"),
+        body: Buffer.from(String(body.bodyBase64 || ""), "base64")
+      });
+    }
+
+    send(res, 200, JSON.stringify({ ok: true }), "application/json; charset=utf-8");
+  } catch (error) {
+    send(res, 400, JSON.stringify({ error: error.message }), "application/json; charset=utf-8");
+  }
+}
+
+function serveLu2BridgeStatus(req, res) {
+  send(res, 200, JSON.stringify(lu2BridgeStatusPayload()), "application/json; charset=utf-8");
+}
+
+function proxyLu2Vmix(req, res) {
+  const incomingUrl = new URL(req.url, `http://${req.headers.host}`);
+  const vmixPath = `/api/?${incomingUrl.searchParams.toString()}`;
+
+  enqueueLu2BridgeCommand(vmixPath)
+    .then((result) => {
+      res.writeHead(result.statusCode, {
+        "Content-Type": result.contentType,
+        "Cache-Control": "no-store"
+      });
+      res.end(result.body);
+    })
+    .catch((error) => {
+      send(res, 503, JSON.stringify({
+        error: "Bridge vMix no disponible.",
+        detail: error.message,
+        bridge: lu2BridgeStatusPayload()
+      }), "application/json; charset=utf-8");
+    });
+}
+
+function serveLu2Route(req, res) {
+  const pathname = lu2Pathname(req);
+
+  if (pathname === "/data/zocalos") {
+    serveLu2Zocalos(req, res);
+    return;
+  }
+
+  if (pathname === "/bridge/poll") {
+    serveLu2BridgePoll(req, res);
+    return;
+  }
+
+  if (pathname === "/bridge/result") {
+    serveLu2BridgeResult(req, res);
+    return;
+  }
+
+  if (pathname === "/bridge/status") {
+    serveLu2BridgeStatus(req, res);
+    return;
+  }
+
+  if (pathname.startsWith("/vmix")) {
+    proxyLu2Vmix(req, res);
+    return;
+  }
+
+  if (pathname.startsWith("/weather/bahia")) {
+    serveBahiaWeather(res);
+    return;
+  }
+
+  if (pathname.startsWith("/monitor/") || pathname.startsWith("/snapshot/input/")) {
+    send(res, 204, "");
+    return;
+  }
+
+  serveLu2Static(req, res);
 }
 
 function isLocalRequest(req) {
@@ -785,6 +1062,12 @@ function getSharedMonitorStream(monitorName, device) {
 
 const server = http.createServer((req, res) => {
   const localRequest = isLocalRequest(req);
+  const pathname = requestPathname(req);
+
+  if (pathname === "/lu2exteriores" || pathname.startsWith("/lu2exteriores/")) {
+    serveLu2Route(req, res);
+    return;
+  }
 
   if (req.url.startsWith("/panel-config.js")) {
     servePanelConfig(req, res);

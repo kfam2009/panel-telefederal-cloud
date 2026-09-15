@@ -81,7 +81,15 @@ function send(res, statusCode, body, contentType = "text/plain; charset=utf-8") 
 
 function serveStatic(req, res) {
   const requestPath = new URL(req.url, `http://${req.headers.host}`).pathname;
-  const relativePath = requestPath === "/" ? "index.html" : requestPath.replace(/^\/+/, "");
+  const panelRoutes = new Set([
+    "/panelgo",
+    "/panelgo/",
+    "/panelgo/telefederal",
+    "/panelgo/telefederal/"
+  ]);
+  const relativePath = requestPath === "/" || panelRoutes.has(requestPath)
+    ? "index.html"
+    : requestPath.replace(/^\/+/, "");
   const safePath = path.normalize(relativePath).replace(/^(\.\.[/\\])+/, "");
   const filePath = path.join(PUBLIC_DIR, safePath);
 

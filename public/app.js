@@ -631,6 +631,14 @@ const state = {
   zocaloOverlaySlots: {},
   overlayWatchers: {}
 };
+
+const PROJECT_BY_ROUTE = {
+  "/panelgo/telefederal": "telefederal",
+  "/telefederal": "telefederal"
+};
+
+const routeProject = PROJECT_BY_ROUTE[window.location.pathname.replace(/\/+$/, "")];
+if (routeProject) state.activeProject = routeProject;
 const rtcMonitors = {
   enabled: false,
   started: false,

@@ -82,8 +82,8 @@ function send(res, statusCode, body, contentType = "text/plain; charset=utf-8") 
 function serveStatic(req, res) {
   const requestPath = new URL(req.url, `http://${req.headers.host}`).pathname;
   const panelRoutes = new Set([
-    "/panelgo/telefederal",
-    "/panelgo/telefederal/"
+    "/telefederal",
+    "/telefederal/"
   ]);
   const relativePath = requestPath === "/" || panelRoutes.has(requestPath)
     ? "index.html"

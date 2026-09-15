@@ -2,6 +2,7 @@ const params = new URLSearchParams(location.search);
 const cloudUrl = params.get("cloud") || "https://panel-telefederal-cloud.onrender.com";
 const token = params.get("token") || params.get("secret") || "";
 const rtcFps = Number(params.get("fps") || 25);
+const publisherName = params.get("name") || "TELEFEDERAL";
 const previewDeviceName = params.get("previewDevice") || "vMix Video External 2";
 const programDeviceName = params.get("programDevice") || "vMix Video";
 const iceServers = [
@@ -14,6 +15,7 @@ window.TF_RTC_PUBLISHER = { peers, tracks };
 let captureReady = false;
 const els = {
   status: document.querySelector("#publisherStatus"),
+  title: document.querySelector("#publisherTitle"),
   log: document.querySelector("#publisherLog"),
   previewSource: document.querySelector("#previewSource"),
   programSource: document.querySelector("#programSource"),
@@ -24,6 +26,9 @@ const els = {
   previewStats: document.querySelector("#previewStats"),
   programStats: document.querySelector("#programStats")
 };
+
+document.title = `Publicador WebRTC ${publisherName}`;
+if (els.title) els.title.textContent = `Motor de video ${publisherName}`;
 
 function setStatus(online, message) {
   els.status.textContent = message;

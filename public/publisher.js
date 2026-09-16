@@ -6,6 +6,14 @@ const publisherName = params.get("name") || "TELEFEDERAL";
 const rtcChannel = params.get("channel") || "telefederal";
 const previewDeviceName = params.get("previewDevice") || "vMix Video External 2";
 const programDeviceName = params.get("programDevice") || "vMix Video";
+const previewDeviceAliases = (params.get("previewAliases") || "vMix Video External 2|vMix Video External|vMix Video External 1|vMix Video External 3")
+  .split("|")
+  .map((item) => item.trim())
+  .filter(Boolean);
+const programDeviceAliases = (params.get("programAliases") || "vMix Video")
+  .split("|")
+  .map((item) => item.trim())
+  .filter(Boolean);
 const iceServers = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" }
@@ -65,13 +73,22 @@ function drawLoop(img, canvas, stats) {
   draw();
 }
 
-function matchDevice(devices, requestedName, usedDeviceIds = new Set()) {
+function matchDevice(devices, requestedNames, usedDeviceIds = new Set()) {
   const videoDevices = devices.filter((device) => device.kind === "videoinput");
-  const normalized = requestedName.trim().toLowerCase();
-  const exact = videoDevices.find((device) => !usedDeviceIds.has(device.deviceId) && device.label.trim().toLowerCase() === normalized);
-  if (exact) return exact;
-  const partial = videoDevices.find((device) => !usedDeviceIds.has(device.deviceId) && device.label.toLowerCase().includes(normalized));
-  if (partial) return partial;
+  const names = (Array.isArray(requestedNames) ? requestedNames : [requestedNames])
+    .map((name) => String(name || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  for (const normalized of names) {
+    const exact = videoDevices.find((device) => !usedDeviceIds.has(device.deviceId) && device.label.trim().toLowerCase() === normalized);
+    if (exact) return exact;
+  }
+
+  for (const normalized of names) {
+    const partial = videoDevices.find((device) => !usedDeviceIds.has(device.deviceId) && device.label.toLowerCase().includes(normalized));
+    if (partial) return partial;
+  }
+
   return videoDevices.find((device) => !usedDeviceIds.has(device.deviceId)) || videoDevices[0];
 }
 
@@ -109,10 +126,10 @@ function updateVideoStats(video, stats, label) {
   }
 }
 
-async function captureVirtualCamera(kind, requestedName, video, stats, usedDeviceIds) {
+async function captureVirtualCamera(kind, requestedNames, video, stats, usedDeviceIds) {
   await unlockDeviceLabels();
   const devices = await navigator.mediaDevices.enumerateDevices();
-  const device = matchDevice(devices, requestedName, usedDeviceIds);
+  const device = matchDevice(devices, requestedNames, usedDeviceIds);
   if (!device) throw new Error(`No encuentro camara para ${kind}.`);
   usedDeviceIds.add(device.deviceId);
 
@@ -128,9 +145,14 @@ async function captureVirtualCamera(kind, requestedName, video, stats, usedDevic
   video.srcObject = stream;
   video.hidden = false;
   await video.play().catch(() => {});
-  updateVideoStats(video, stats, device.label || requestedName);
-  setLog(`${kind}: ${device.label || requestedName}`);
-  return stream.getVideoTracks()[0];
+  updateVideoStats(video, stats, device.label || requestedNames[0]);
+  setLog(`${kind}: ${device.label || requestedNames[0]}`);
+  const track = stream.getVideoTracks()[0];
+  track.addEventListener("ended", () => {
+    captureReady = false;
+    setLog(`${kind}: fuente desconectada, reintentar abriendo el publicador.`);
+  });
+  return track;
 }
 
 function captureMjpegFallback(kind, img, canvas, stats, path) {
@@ -202,16 +224,16 @@ async function ensureCaptureTracks() {
   captureReady = false;
   const usedDeviceIds = new Set();
   try {
-    tracks.preview = await captureVirtualCamera("Preview", previewDeviceName, els.previewVideo, els.previewStats, usedDeviceIds);
+    tracks.preview = await captureVirtualCamera("Preview", [previewDeviceName, ...previewDeviceAliases], els.previewVideo, els.previewStats, usedDeviceIds);
   } catch (error) {
-    tracks.preview = captureMjpegFallback("Preview", els.previewSource, els.previewCanvas, els.previewStats, "/monitor/preview.mjpg");
     setLog(`Preview sin camara virtual: ${error.message}`);
+    throw error;
   }
   try {
-    tracks.program = await captureVirtualCamera("Aire", programDeviceName, els.programVideo, els.programStats, usedDeviceIds);
+    tracks.program = await captureVirtualCamera("Aire", [programDeviceName, ...programDeviceAliases], els.programVideo, els.programStats, usedDeviceIds);
   } catch (error) {
-    tracks.program = captureMjpegFallback("Aire", els.programSource, els.programCanvas, els.programStats, "/monitor/program.mjpg");
     setLog(`Aire sin camara virtual: ${error.message}`);
+    throw error;
   }
   captureReady = true;
 }
@@ -223,7 +245,13 @@ async function start() {
     return;
   }
 
-  await ensureCaptureTracks();
+  try {
+    await ensureCaptureTracks();
+  } catch {
+    setStatus(false, "Falta fuente");
+    setTimeout(start, 3000);
+    return;
+  }
 
   const socket = new WebSocket(wsUrl());
   socket.addEventListener("open", () => setStatus(true, "Publicando"));

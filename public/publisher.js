@@ -3,6 +3,7 @@ const cloudUrl = params.get("cloud") || "https://panel-telefederal-cloud.onrende
 const token = params.get("token") || params.get("secret") || "";
 const rtcFps = Number(params.get("fps") || 25);
 const publisherName = params.get("name") || "TELEFEDERAL";
+const rtcChannel = params.get("channel") || "telefederal";
 const previewDeviceName = params.get("previewDevice") || "vMix Video External 2";
 const programDeviceName = params.get("programDevice") || "vMix Video";
 const iceServers = [
@@ -145,7 +146,7 @@ function wsUrl() {
   const url = new URL(cloudUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.pathname = "/rtc";
-  url.search = `?role=publisher&token=${encodeURIComponent(token)}`;
+  url.search = `?role=publisher&channel=${encodeURIComponent(rtcChannel)}&token=${encodeURIComponent(token)}`;
   return url.toString();
 }
 

@@ -64,8 +64,7 @@ const monitorStreams = new Map();
 const bridgeClients = new Set();
 const bridgeRequests = new Map();
 const bridgeMonitorStreams = new Map();
-const rtcViewers = new Map();
-let rtcPublisher = null;
+const rtcChannels = new Map();
 const premiereClients = new Set();
 const premiereRequests = new Map();
 let lu2BridgeCommandId = 0;
@@ -1432,6 +1431,14 @@ wss.on("connection", (socket, req) => {
 
 const rtcWss = new WebSocket.Server({ noServer: true });
 
+function rtcChannel(name = "telefederal") {
+  const channelName = String(name || "telefederal").trim().toLowerCase() || "telefederal";
+  if (!rtcChannels.has(channelName)) {
+    rtcChannels.set(channelName, { publisher: null, viewers: new Map() });
+  }
+  return rtcChannels.get(channelName);
+}
+
 function sendSocket(socket, message) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(message));
@@ -1439,11 +1446,11 @@ function sendSocket(socket, message) {
 }
 
 function forwardToPublisher(message) {
-  sendSocket(rtcPublisher, message);
+  sendSocket(message.channel.publisher, message.payload);
 }
 
 function forwardToViewer(viewerId, message) {
-  sendSocket(rtcViewers.get(viewerId), message);
+  sendSocket(message.channel.viewers.get(viewerId), message.payload);
 }
 
 rtcWss.on("connection", (socket, req) => {
@@ -1451,6 +1458,7 @@ rtcWss.on("connection", (socket, req) => {
   const role = rtcUrl.searchParams.get("role") || "viewer";
   const token = rtcUrl.searchParams.get("token") || "";
   const viewerId = rtcUrl.searchParams.get("viewerId") || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const channel = rtcChannel(rtcUrl.searchParams.get("channel"));
 
   if (role === "publisher") {
     if (!BRIDGE_SECRET || token !== BRIDGE_SECRET) {
@@ -1458,16 +1466,16 @@ rtcWss.on("connection", (socket, req) => {
       return;
     }
 
-    if (rtcPublisher && rtcPublisher.readyState === WebSocket.OPEN) {
-      rtcPublisher.close(1012, "Publisher reemplazado");
+    if (channel.publisher && channel.publisher.readyState === WebSocket.OPEN) {
+      channel.publisher.close(1012, "Publisher reemplazado");
     }
 
-    rtcPublisher = socket;
+    channel.publisher = socket;
     sendSocket(socket, { type: "publisher-ready" });
-    rtcViewers.forEach((_, id) => sendSocket(socket, { type: "viewer-ready", viewerId: id }));
+    channel.viewers.forEach((_, id) => sendSocket(socket, { type: "viewer-ready", viewerId: id }));
   } else {
-    rtcViewers.set(viewerId, socket);
-    sendSocket(socket, { type: "viewer-id", viewerId, hasPublisher: !!rtcPublisher });
+    channel.viewers.set(viewerId, socket);
+    sendSocket(socket, { type: "viewer-id", viewerId, hasPublisher: !!channel.publisher });
   }
 
   socket.on("message", (data) => {
@@ -1479,23 +1487,23 @@ rtcWss.on("connection", (socket, req) => {
     }
 
     if (role === "publisher") {
-      forwardToViewer(message.viewerId, message);
+      forwardToViewer(message.viewerId, { channel, payload: message });
       return;
     }
 
-    forwardToPublisher({ ...message, viewerId });
+    forwardToPublisher({ channel, payload: { ...message, viewerId } });
   });
 
   socket.on("close", () => {
-    if (role === "publisher" && rtcPublisher === socket) {
-      rtcPublisher = null;
-      rtcViewers.forEach((viewer) => sendSocket(viewer, { type: "publisher-offline" }));
+    if (role === "publisher" && channel.publisher === socket) {
+      channel.publisher = null;
+      channel.viewers.forEach((viewer) => sendSocket(viewer, { type: "publisher-offline" }));
       return;
     }
 
     if (role !== "publisher") {
-      rtcViewers.delete(viewerId);
-      forwardToPublisher({ type: "viewer-left", viewerId });
+      channel.viewers.delete(viewerId);
+      forwardToPublisher({ channel, payload: { type: "viewer-left", viewerId } });
     }
   });
 });

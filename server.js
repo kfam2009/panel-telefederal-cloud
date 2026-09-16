@@ -20,6 +20,7 @@ const LU2_CLOCK_WEATHER_OVERLAY_SLOT = "3";
 const LU2_CLOCK_WEATHER_FIELD = "TextBlock1.Text";
 const LU2_CLOCK_WEATHER_EXTRA_FIELD = "TextBlock2.Text";
 const LU2_CLOCK_WEATHER_INTERVAL_MS = 3000;
+const LU2_CLOCK_WEATHER_ENABLED = false;
 const LU2_PROGRAM_NAME_FIELDS = ["TextBlock1.Text", "TextBlock2.Text"];
 const LU2_PROGRAM_NAME_DEFAULTS = {
   "60": "PANORAMA",
@@ -363,6 +364,10 @@ async function getLu2BahiaWeatherData() {
 async function refreshLu2ClockWeatherInput() {
   if (!lu2BridgeLastSeenAt || Date.now() - lu2BridgeLastSeenAt > 45000) return;
   if (lu2BridgeQueue.length || lu2BridgePending.size) return;
+  if (!LU2_CLOCK_WEATHER_ENABLED) {
+    await clearLu2ClockWeatherInput();
+    return;
+  }
 
   let temperature = lu2LastClockWeatherTemperature;
 
@@ -399,6 +404,16 @@ async function refreshLu2ClockWeatherInput() {
   } catch {}
 }
 
+async function clearLu2ClockWeatherInput() {
+  try {
+    await callLu2BridgeApi(`/api/?Function=SetText&Input=${LU2_CLOCK_WEATHER_INPUT}&SelectedName=${encodeURIComponent(LU2_CLOCK_WEATHER_FIELD)}&Value=`);
+    await callLu2BridgeApi(`/api/?Function=SetText&Input=${LU2_CLOCK_WEATHER_INPUT}&SelectedName=${encodeURIComponent(LU2_CLOCK_WEATHER_EXTRA_FIELD)}&Value=`);
+    await callLu2BridgeApi(`/api/?Function=OverlayInput${LU2_CLOCK_WEATHER_OVERLAY_SLOT}Out`);
+    lu2LastSentClockText = "";
+    lu2LastSentTemperatureText = "";
+  } catch {}
+}
+
 async function enforceLu2ClockWeatherFields() {
   if (!lu2BridgeLastSeenAt || Date.now() - lu2BridgeLastSeenAt > 45000) return;
   if (lu2BridgeQueue.length || lu2BridgePending.size) return;
@@ -408,7 +423,7 @@ async function enforceLu2ClockWeatherFields() {
     const inputPattern = new RegExp(`<input[^>]*number=["']${LU2_CLOCK_WEATHER_INPUT}["'][^>]*>([\\s\\S]*?)<\\/input>`);
     const inputXml = vmixXml.match(inputPattern)?.[0] || "";
 
-    if (inputXml) {
+    if (LU2_CLOCK_WEATHER_ENABLED && inputXml) {
       const currentClock = textFieldFromInputXml(inputXml, LU2_CLOCK_WEATHER_FIELD);
       const currentTemperature = textFieldFromInputXml(inputXml, LU2_CLOCK_WEATHER_EXTRA_FIELD);
       const recoveredTemperature =

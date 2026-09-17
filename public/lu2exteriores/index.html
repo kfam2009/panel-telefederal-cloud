@@ -114,6 +114,23 @@
           </div>
           <div class="mv-layout-tabs" id="radioMultiviewLayouts"></div>
           <div class="mv-grid" id="radioMultiviewGrid"></div>
+          <div class="mv-framing" id="radioMultiviewFraming" aria-label="Ajuste de camara">
+            <div class="mv-framing-status" id="radioMultiviewFramingStatus">Selecciona una camara</div>
+            <div class="mv-framing-row">
+              <span>Posicion</span>
+              <button type="button" data-mv-adjust="pan-left" title="Mover imagen a la izquierda" aria-label="Mover imagen a la izquierda">&#8592;</button>
+              <button type="button" data-mv-adjust="pan-right" title="Mover imagen a la derecha" aria-label="Mover imagen a la derecha">&#8594;</button>
+            </div>
+            <div class="mv-framing-row mv-framing-crop">
+              <span>Recorte</span>
+              <span class="mv-framing-axis">X1</span>
+              <button type="button" data-mv-adjust="crop-x1-left" title="Mover borde izquierdo hacia afuera" aria-label="Mover borde izquierdo hacia afuera">&#8592;</button>
+              <button type="button" data-mv-adjust="crop-x1-right" title="Mover borde izquierdo hacia adentro" aria-label="Mover borde izquierdo hacia adentro">&#8594;</button>
+              <span class="mv-framing-axis">X2</span>
+              <button type="button" data-mv-adjust="crop-x2-left" title="Mover borde derecho hacia adentro" aria-label="Mover borde derecho hacia adentro">&#8592;</button>
+              <button type="button" data-mv-adjust="crop-x2-right" title="Mover borde derecho hacia afuera" aria-label="Mover borde derecho hacia afuera">&#8594;</button>
+            </div>
+          </div>
         </section>
 
         <section class="control-section sponsor-panel" data-tab-panel="publicidades" aria-label="Tandas" hidden>

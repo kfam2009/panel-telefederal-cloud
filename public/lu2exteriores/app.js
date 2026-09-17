@@ -310,6 +310,9 @@ const RADIO_MV_SOURCES = [
 ];
 const RADIO_MV_SPECIAL_SOURCES = {};
 const RADIO_MV_SELECTED_KEY = "selectedRadioMultiviewLayout";
+const RADIO_MV_SELECTED_LAYER_KEY = "selectedRadioMultiviewLayer";
+const MULTIVIEW_PAN_STEP = 0.025;
+const MULTIVIEW_CROP_STEP = 0.01;
 const DEFAULT_PHOTO_LIST = [
   "\\\\DESKTOP-EO7FM8K\\Fotos\\pablo pascual.png",
   "\\\\DESKTOP-EO7FM8K\\Fotos\\danilo belloni.png",
@@ -370,6 +373,8 @@ const els = {
   radioMultiviewLayouts: document.querySelector("#radioMultiviewLayouts"),
   radioMultiviewGrid: document.querySelector("#radioMultiviewGrid"),
   radioMultiviewStatus: document.querySelector("#radioMultiviewStatus"),
+  radioMultiviewFraming: document.querySelector("#radioMultiviewFraming"),
+  radioMultiviewFramingStatus: document.querySelector("#radioMultiviewFramingStatus"),
   multiviewTarget: document.querySelector("#multiviewTarget"),
   masterMeterLeft: document.querySelector("#masterMeterLeft"),
   masterMeterRight: document.querySelector("#masterMeterRight"),
@@ -398,6 +403,10 @@ function inputLabel(input) {
 
 function getInput(inputNumber) {
   return state.inputs.find((input) => input.number === String(inputNumber));
+}
+
+function getInputByKey(key) {
+  return state.inputs.find((input) => input.key === key);
 }
 
 function getInputByTitle(title) {
@@ -610,7 +619,10 @@ function parseInputs(xmlText) {
     })),
     overlays: [...input.querySelectorAll("overlay")].map((overlay) => ({
       index: overlay.getAttribute("index"),
-      key: overlay.getAttribute("key")
+      key: overlay.getAttribute("key"),
+      panX: Number(overlay.querySelector("position")?.getAttribute("panX") || 0),
+      cropX1: Number(overlay.querySelector("crop")?.getAttribute("X1") || 0),
+      cropX2: Number(overlay.querySelector("crop")?.getAttribute("X2") || 1)
     }))
   }));
 }
@@ -1213,6 +1225,16 @@ function multiviewOverlayForLayer(input, layer) {
     || input?.overlays.find((overlay) => overlay.index === String(layer));
 }
 
+function selectedRadioMultiviewLayer(layout) {
+  const saved = localStorage.getItem(RADIO_MV_SELECTED_LAYER_KEY);
+  return layout.layers.includes(saved) ? saved : layout.layers[0];
+}
+
+function selectRadioMultiviewLayer(layer) {
+  localStorage.setItem(RADIO_MV_SELECTED_LAYER_KEY, String(layer));
+  renderRadioMultiview();
+}
+
 function renderRadioMultiview() {
   if (!els.radioMultiviewLayouts || !els.radioMultiviewGrid) {
     return;
@@ -1224,6 +1246,7 @@ function renderRadioMultiview() {
 
   const selectedLayout = selectedRadioMultiviewLayout();
   const target = getInput(selectedLayout.input);
+  const selectedLayer = selectedRadioMultiviewLayer(selectedLayout);
 
   els.radioMultiviewLayouts.innerHTML = "";
   RADIO_MV_LAYOUTS.forEach((layout) => {
@@ -1279,6 +1302,8 @@ function renderRadioMultiview() {
     const assignedInput = state.inputs.find((input) => input.key === assignedKey);
 
     row.className = "mv-row";
+    row.classList.toggle("is-selected", layer === selectedLayer);
+    row.dataset.radioMvSelectLayer = layer;
     label.className = "mv-position-label";
     label.textContent = selectedLayout.positions?.[index] || `Posicion ${index + 1}`;
     label.title = `Layer ${layer}`;
@@ -1307,6 +1332,56 @@ function renderRadioMultiview() {
     row.append(label, select, current);
     els.radioMultiviewGrid.appendChild(row);
   });
+
+  const selectedOverlay = multiviewOverlayForLayer(target, selectedLayer);
+  const selectedInput = getInputByKey(selectedOverlay?.key);
+  const framingDisabled = !target || !selectedOverlay;
+  els.radioMultiviewFraming?.querySelectorAll("button").forEach((button) => {
+    button.disabled = framingDisabled;
+  });
+  if (els.radioMultiviewFramingStatus) {
+    els.radioMultiviewFramingStatus.textContent = framingDisabled
+      ? "Selecciona una camara"
+      : `Ajustando: ${selectedInput?.title || `Layer ${selectedLayer}`}`;
+  }
+}
+
+function clampMultiviewValue(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+async function adjustRadioMultiviewFraming(action) {
+  const layout = selectedRadioMultiviewLayout();
+  const target = getInput(layout.input);
+  const layer = selectedRadioMultiviewLayer(layout);
+  const overlay = multiviewOverlayForLayer(target, layer);
+
+  if (!target || !overlay) {
+    setLog("Selecciona una camara del multiview.");
+    return;
+  }
+
+  const adjustments = {
+    "pan-left": { suffix: "PanX", value: clampMultiviewValue(overlay.panX - MULTIVIEW_PAN_STEP, -2, 2) },
+    "pan-right": { suffix: "PanX", value: clampMultiviewValue(overlay.panX + MULTIVIEW_PAN_STEP, -2, 2) },
+    "crop-x1-left": { suffix: "CropX1", value: clampMultiviewValue(overlay.cropX1 - MULTIVIEW_CROP_STEP, 0, overlay.cropX2) },
+    "crop-x1-right": { suffix: "CropX1", value: clampMultiviewValue(overlay.cropX1 + MULTIVIEW_CROP_STEP, 0, overlay.cropX2) },
+    "crop-x2-left": { suffix: "CropX2", value: clampMultiviewValue(overlay.cropX2 - MULTIVIEW_CROP_STEP, overlay.cropX1, 1) },
+    "crop-x2-right": { suffix: "CropX2", value: clampMultiviewValue(overlay.cropX2 + MULTIVIEW_CROP_STEP, overlay.cropX1, 1) }
+  };
+  const adjustment = adjustments[action];
+
+  if (!adjustment) {
+    return;
+  }
+
+  await callVmix({
+    Function: `SetLayer${layer}${adjustment.suffix}`,
+    Input: target.number,
+    Value: adjustment.value.toFixed(4)
+  });
+  setLog(`${target.title}: ajuste de ${getInputByKey(overlay.key)?.title || `layer ${layer}`}`);
+  await refreshState();
 }
 
 function refreshDirectSnapshots() {
@@ -3152,6 +3227,7 @@ document.addEventListener("change", async (event) => {
   const radioMvLayer = event.target.closest("[data-radio-mv-layer]");
 
   if (radioMvLayer) {
+    localStorage.setItem(RADIO_MV_SELECTED_LAYER_KEY, radioMvLayer.dataset.radioMvLayer);
     radioMvLayer.disabled = true;
 
     try {
@@ -3197,6 +3273,27 @@ document.addEventListener("change", async (event) => {
     setLog(error.message);
   } finally {
     radioMultiviewSelect.disabled = false;
+  }
+});
+
+document.addEventListener("click", async (event) => {
+  const framingButton = event.target.closest("[data-mv-adjust]");
+
+  if (framingButton) {
+    framingButton.disabled = true;
+    try {
+      await adjustRadioMultiviewFraming(framingButton.dataset.mvAdjust);
+    } catch (error) {
+      setLog(error.message);
+    } finally {
+      framingButton.disabled = false;
+    }
+    return;
+  }
+
+  const layerRow = event.target.closest("[data-radio-mv-select-layer]");
+  if (layerRow) {
+    selectRadioMultiviewLayer(layerRow.dataset.radioMvSelectLayer);
   }
 });
 

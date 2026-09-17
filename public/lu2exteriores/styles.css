@@ -1423,6 +1423,62 @@ h3 {
   padding: 8px;
 }
 
+.mv-row.is-selected {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.mv-framing {
+  align-items: center;
+  background: rgba(11, 15, 20, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(160px, 1fr) auto auto;
+  margin-top: 10px;
+  padding: 8px;
+}
+
+.mv-framing-status {
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 900;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mv-framing-row {
+  align-items: center;
+  display: grid;
+  gap: 5px;
+  grid-template-columns: auto repeat(2, 34px);
+}
+
+.mv-framing-crop {
+  grid-template-columns: auto auto repeat(2, 34px) auto repeat(2, 34px);
+}
+
+.mv-framing-row > span:first-child,
+.mv-framing-axis {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mv-framing-row button {
+  align-items: center;
+  display: inline-flex;
+  font-size: 1.1rem;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0;
+  width: 34px;
+}
+
 .mv-position-label {
   color: var(--muted);
   font-size: 0.8rem;
@@ -1552,6 +1608,10 @@ h3 {
   .mv-layout-tabs,
   .mv-layout-actions,
   .mv-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mv-framing {
     grid-template-columns: 1fr;
   }
 

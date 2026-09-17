@@ -1380,8 +1380,10 @@ async function adjustRadioMultiviewFraming(action) {
     Input: target.number,
     Value: adjustment.value.toFixed(4)
   });
+  if (adjustment.suffix === "PanX") overlay.panX = adjustment.value;
+  if (adjustment.suffix === "CropX1") overlay.cropX1 = adjustment.value;
+  if (adjustment.suffix === "CropX2") overlay.cropX2 = adjustment.value;
   setLog(`${target.title}: ajuste de ${getInputByKey(overlay.key)?.title || `layer ${layer}`}`);
-  await refreshState();
 }
 
 function refreshDirectSnapshots() {
@@ -3331,7 +3333,7 @@ document.addEventListener("keydown", async (event) => {
 loadMonitorConfig();
 clearClockWeatherInput().catch((error) => setLog(error.message || "No pude apagar hora y temperatura."));
 refreshState();
-setInterval(refreshState, 500);
+setInterval(refreshState, 2000);
 setInterval(refreshDirectSnapshots, 1000);
 
 

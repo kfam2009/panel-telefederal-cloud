@@ -292,7 +292,13 @@ function enqueueLu2BridgeCommand(pathname) {
     }, 12000);
 
     lu2BridgePending.set(id, { resolve, reject, timeout });
-    lu2BridgeQueue.push({ id, path: pathname });
+    const command = { id, path: pathname };
+    const firstStateRead = lu2BridgeQueue.findIndex((queued) => queued.path === "/api/");
+    if (pathname !== "/api/" && firstStateRead >= 0) {
+      lu2BridgeQueue.splice(firstStateRead, 0, command);
+    } else {
+      lu2BridgeQueue.push(command);
+    }
     dispatchLu2BridgeCommands();
   });
 }

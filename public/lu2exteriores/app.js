@@ -313,6 +313,7 @@ const RADIO_MV_SELECTED_KEY = "selectedRadioMultiviewLayout";
 const RADIO_MV_SELECTED_LAYER_KEY = "selectedRadioMultiviewLayer";
 const MULTIVIEW_PAN_STEP = 0.025;
 const MULTIVIEW_CROP_STEP = 0.01;
+const MULTIVIEW_ZOOM_STEP = 0.025;
 const DEFAULT_PHOTO_LIST = [
   "\\\\DESKTOP-EO7FM8K\\Fotos\\pablo pascual.png",
   "\\\\DESKTOP-EO7FM8K\\Fotos\\danilo belloni.png",
@@ -621,6 +622,8 @@ function parseInputs(xmlText) {
       index: overlay.getAttribute("index"),
       key: overlay.getAttribute("key"),
       panX: Number(overlay.querySelector("position")?.getAttribute("panX") || 0),
+      panY: Number(overlay.querySelector("position")?.getAttribute("panY") || 0),
+      zoom: Number(overlay.querySelector("position")?.getAttribute("zoomX") || 1),
       cropX1: Number(overlay.querySelector("crop")?.getAttribute("X1") || 0),
       cropX2: Number(overlay.querySelector("crop")?.getAttribute("X2") || 1)
     }))
@@ -1364,6 +1367,10 @@ async function adjustRadioMultiviewFraming(action) {
   const adjustments = {
     "pan-left": { suffix: "PanX", value: clampMultiviewValue(overlay.panX - MULTIVIEW_PAN_STEP, -2, 2) },
     "pan-right": { suffix: "PanX", value: clampMultiviewValue(overlay.panX + MULTIVIEW_PAN_STEP, -2, 2) },
+    "pan-down": { suffix: "PanY", value: clampMultiviewValue(overlay.panY - MULTIVIEW_PAN_STEP, -2, 2) },
+    "pan-up": { suffix: "PanY", value: clampMultiviewValue(overlay.panY + MULTIVIEW_PAN_STEP, -2, 2) },
+    "zoom-out": { suffix: "Zoom", value: clampMultiviewValue(overlay.zoom - MULTIVIEW_ZOOM_STEP, 0, 5) },
+    "zoom-in": { suffix: "Zoom", value: clampMultiviewValue(overlay.zoom + MULTIVIEW_ZOOM_STEP, 0, 5) },
     "crop-x1-left": { suffix: "CropX1", value: clampMultiviewValue(overlay.cropX1 - MULTIVIEW_CROP_STEP, 0, overlay.cropX2) },
     "crop-x1-right": { suffix: "CropX1", value: clampMultiviewValue(overlay.cropX1 + MULTIVIEW_CROP_STEP, 0, overlay.cropX2) },
     "crop-x2-left": { suffix: "CropX2", value: clampMultiviewValue(overlay.cropX2 - MULTIVIEW_CROP_STEP, overlay.cropX1, 1) },
@@ -1381,6 +1388,8 @@ async function adjustRadioMultiviewFraming(action) {
     Value: adjustment.value.toFixed(4)
   });
   if (adjustment.suffix === "PanX") overlay.panX = adjustment.value;
+  if (adjustment.suffix === "PanY") overlay.panY = adjustment.value;
+  if (adjustment.suffix === "Zoom") overlay.zoom = adjustment.value;
   if (adjustment.suffix === "CropX1") overlay.cropX1 = adjustment.value;
   if (adjustment.suffix === "CropX2") overlay.cropX2 = adjustment.value;
   setLog(`${target.title}: ajuste de ${getInputByKey(overlay.key)?.title || `layer ${layer}`}`);

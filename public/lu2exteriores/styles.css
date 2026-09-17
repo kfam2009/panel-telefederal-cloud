@@ -1435,7 +1435,7 @@ h3 {
   border-radius: 8px;
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(160px, 1fr) auto auto;
+  grid-template-columns: minmax(160px, 1fr) auto auto auto;
   margin-top: 10px;
   padding: 8px;
 }
@@ -1458,6 +1458,10 @@ h3 {
 }
 
 .mv-framing-crop {
+  grid-template-columns: auto auto repeat(2, 34px) auto repeat(2, 34px);
+}
+
+.mv-framing-row:has(.mv-framing-axis) {
   grid-template-columns: auto auto repeat(2, 34px) auto repeat(2, 34px);
 }
 

@@ -1359,8 +1359,13 @@ function renderPtzControls() {
   if (els.ptzStatus) {
     els.ptzStatus.textContent = input ? `Input 4: ${input.title}` : "Input 4 no disponible";
   }
-  document.querySelectorAll("[data-ptz-start], [data-ptz-stop-all]").forEach((button) => {
+  document.querySelectorAll("[data-ptz-start], [data-ptz-stop-all], [data-ptz-route]").forEach((button) => {
     button.disabled = !input;
+  });
+  document.querySelectorAll("[data-ptz-route]").forEach((button) => {
+    const isPreview = button.dataset.ptzRoute === "PreviewInput" && state.preview === PTZ_INPUT;
+    const isActive = button.dataset.ptzRoute === "CutDirect" && state.active === PTZ_INPUT;
+    button.classList.toggle("is-active", isPreview || isActive);
   });
 }
 
@@ -3264,6 +3269,22 @@ document.addEventListener("click", async (event) => {
     setLog("Camara PTZ detenida.");
   } catch (error) {
     setLog(error.message);
+  }
+});
+
+document.addEventListener("click", async (event) => {
+  const routeButton = event.target.closest("[data-ptz-route]");
+  if (!routeButton || routeButton.disabled) return;
+
+  routeButton.disabled = true;
+  try {
+    await callVmix({ Function: routeButton.dataset.ptzRoute, Input: PTZ_INPUT });
+    setLog(routeButton.dataset.ptzRoute === "PreviewInput" ? "Camara PTZ en Previo." : "Camara PTZ al aire.");
+    await refreshState();
+  } catch (error) {
+    setLog(error.message);
+  } finally {
+    routeButton.disabled = false;
   }
 });
 

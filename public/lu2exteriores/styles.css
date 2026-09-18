@@ -1541,6 +1541,37 @@ h3 {
   gap: 20px;
 }
 
+.ptz-routing {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ptz-routing button {
+  font-size: 0.82rem;
+  font-weight: 900;
+  min-height: 48px;
+  text-transform: uppercase;
+}
+
+.ptz-routing button[data-ptz-route="PreviewInput"] {
+  border-color: var(--preview);
+}
+
+.ptz-routing button[data-ptz-route="CutDirect"] {
+  border-color: var(--cut);
+}
+
+.ptz-routing button[data-ptz-route="PreviewInput"].is-active {
+  background: var(--preview);
+  color: #111317;
+}
+
+.ptz-routing button[data-ptz-route="CutDirect"].is-active {
+  background: var(--cut);
+  color: #ffffff;
+}
+
 .ptz-zoom {
   align-items: center;
   display: grid;

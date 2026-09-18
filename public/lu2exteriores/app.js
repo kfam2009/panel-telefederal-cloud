@@ -54,7 +54,7 @@ const MULTIVIEW_INPUTS = ["6", "7", "8", "9"];
 const MULTIVIEW_BACKGROUND_LAYER = "1";
 const MULTIVIEW_BACKGROUND_INPUT = "11";
 const MULTIVIEW_LAYER_INDEXES = ["9", "8", "7", "6"];
-const MULTIVIEW_CAMERA_INPUTS = ["1", "2", "3", "4", "5", "78", "79", "80", "81", "82", "83", "84", "85", "86"];
+const MULTIVIEW_CAMERA_INPUTS = ["1", "2", "3", "4", "5", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87"];
 const MULTIVIEW_STORAGE_KEY = "multiviewAssignmentsLayers9To6";
 const DIRECT_CUTS = [
   { input: "1", label: "Camara 1" },
@@ -306,7 +306,8 @@ const RADIO_MV_SOURCES = [
   { input: "83", label: "Input 83" },
   { input: "84", label: "Input 84" },
   { input: "85", label: "Input 85" },
-  { input: "86", label: "Input 86" }
+  { input: "86", label: "Input 86" },
+  { input: "87", label: "Input 87" }
 ];
 const RADIO_MV_SPECIAL_SOURCES = {};
 const RADIO_MV_SELECTED_KEY = "selectedRadioMultiviewLayout";

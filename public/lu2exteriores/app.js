@@ -94,7 +94,8 @@ const RESET_INPUTS = [
   { input: "5", label: "Reset Camara 5" },
   { input: "56", label: "Reset Camara Plaza" }
 ];
-const VISIBLE_TABS = new Set(["cut", "zocalos", "multiview"]);
+const VISIBLE_TABS = new Set(["cut", "zocalos", "multiview", "ptz"]);
+const PTZ_INPUT = "4";
 const TANDA_BUTTONS = [
   { key: "eti-1", label: "TANDA ESTA TODO INVENTADO 1", input: "48" },
   { key: "eti-2", label: "TANDA ESTA TODO INVENTADO 2", input: "49" },
@@ -377,6 +378,9 @@ const els = {
   radioMultiviewStatus: document.querySelector("#radioMultiviewStatus"),
   radioMultiviewFraming: document.querySelector("#radioMultiviewFraming"),
   radioMultiviewFramingStatus: document.querySelector("#radioMultiviewFramingStatus"),
+  ptzStatus: document.querySelector("#ptzStatus"),
+  ptzSpeed: document.querySelector("#ptzSpeed"),
+  ptzSpeedValue: document.querySelector("#ptzSpeedValue"),
   multiviewTarget: document.querySelector("#multiviewTarget"),
   masterMeterLeft: document.querySelector("#masterMeterLeft"),
   masterMeterRight: document.querySelector("#masterMeterRight"),
@@ -1348,6 +1352,28 @@ function renderRadioMultiview() {
       ? "Selecciona una camara"
       : `Ajustando: ${selectedInput?.title || `Layer ${selectedLayer}`}`;
   }
+}
+
+function renderPtzControls() {
+  const input = getInput(PTZ_INPUT);
+  if (els.ptzStatus) {
+    els.ptzStatus.textContent = input ? `Input 4: ${input.title}` : "Input 4 no disponible";
+  }
+  document.querySelectorAll("[data-ptz-start], [data-ptz-stop-all]").forEach((button) => {
+    button.disabled = !input;
+  });
+}
+
+function ptzSpeed() {
+  return Number(els.ptzSpeed?.value || 0.25).toFixed(2);
+}
+
+async function sendPtzCommand(functionName, withSpeed = false) {
+  await callVmix({
+    Function: functionName,
+    Input: PTZ_INPUT,
+    ...(withSpeed ? { Value: ptzSpeed() } : {})
+  });
 }
 
 function clampMultiviewValue(value, min, max) {
@@ -2765,6 +2791,7 @@ async function refreshState() {
     renderLogoList();
     renderPhotoList();
     renderRadioMultiview();
+    renderPtzControls();
     setStatus(true, "Sistema en Linea");
   } catch (error) {
     setStatus(false, "vMix desconectado");
@@ -3190,6 +3217,58 @@ document.addEventListener("click", async (event) => {
   } finally {
     button.disabled = false;
   }
+});
+
+const activePtzPointers = new Map();
+
+document.addEventListener("pointerdown", (event) => {
+  const button = event.target.closest("[data-ptz-start]");
+  if (!button || button.disabled) return;
+
+  event.preventDefault();
+  button.setPointerCapture?.(event.pointerId);
+  activePtzPointers.set(event.pointerId, button.dataset.ptzStop);
+  sendPtzCommand(button.dataset.ptzStart, true).catch((error) => setLog(error.message));
+});
+
+async function stopPtzPointer(event) {
+  const stopFunction = activePtzPointers.get(event.pointerId);
+  if (!stopFunction) return;
+
+  activePtzPointers.delete(event.pointerId);
+  try {
+    await sendPtzCommand(stopFunction);
+  } catch (error) {
+    setLog(error.message);
+  }
+}
+
+document.addEventListener("pointerup", stopPtzPointer);
+document.addEventListener("pointercancel", stopPtzPointer);
+
+window.addEventListener("blur", () => {
+  if (!activePtzPointers.size) return;
+  activePtzPointers.clear();
+  sendPtzCommand("PTZMoveStop").catch(() => {});
+  sendPtzCommand("PTZZoomStop").catch(() => {});
+});
+
+document.addEventListener("click", async (event) => {
+  const stopButton = event.target.closest("[data-ptz-stop-all]");
+  if (!stopButton) return;
+
+  try {
+    await sendPtzCommand("PTZMoveStop");
+    await sendPtzCommand("PTZZoomStop");
+    activePtzPointers.clear();
+    setLog("Camara PTZ detenida.");
+  } catch (error) {
+    setLog(error.message);
+  }
+});
+
+els.ptzSpeed?.addEventListener("input", () => {
+  els.ptzSpeedValue.textContent = `${Math.round(Number(els.ptzSpeed.value) * 100)}%`;
 });
 
 document.addEventListener("input", (event) => {

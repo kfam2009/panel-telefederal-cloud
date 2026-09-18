@@ -54,6 +54,7 @@
         <button type="button" class="tab-button is-active" data-tab="cut">Directo</button>
         <button type="button" class="tab-button" data-tab="zocalos">Zocalos</button>
         <button type="button" class="tab-button" data-tab="multiview">Multiview</button>
+        <button type="button" class="tab-button" data-tab="ptz">PTZ</button>
         <button type="button" class="tab-button" data-tab="panelistas" hidden>Panelistas</button>
         <button type="button" class="tab-button" data-tab="publicidades" hidden>Tandas</button>
         <button type="button" class="tab-button" data-tab="programas" hidden>Programas</button>
@@ -138,6 +139,38 @@
               <span class="mv-framing-axis">X2</span>
               <button type="button" data-mv-adjust="crop-x2-left" title="Mover borde derecho hacia adentro" aria-label="Mover borde derecho hacia adentro">&#8592;</button>
               <button type="button" data-mv-adjust="crop-x2-right" title="Mover borde derecho hacia afuera" aria-label="Mover borde derecho hacia afuera">&#8594;</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="control-section ptz-panel" data-tab-panel="ptz" aria-label="Control PTZ" hidden>
+          <div class="section-title">
+            <h2>PTZ</h2>
+            <span class="multiview-target" id="ptzStatus">Camara 4</span>
+          </div>
+          <div class="ptz-control">
+            <div class="ptz-pad" aria-label="Movimiento de camara">
+              <button type="button" data-ptz-start="PTZMoveUpLeft" data-ptz-stop="PTZMoveStop" aria-label="Subir a la izquierda">&#8598;</button>
+              <button type="button" data-ptz-start="PTZMoveUp" data-ptz-stop="PTZMoveStop" aria-label="Subir">&#8593;</button>
+              <button type="button" data-ptz-start="PTZMoveUpRight" data-ptz-stop="PTZMoveStop" aria-label="Subir a la derecha">&#8599;</button>
+              <button type="button" data-ptz-start="PTZMoveLeft" data-ptz-stop="PTZMoveStop" aria-label="Mover a la izquierda">&#8592;</button>
+              <button type="button" class="ptz-stop" data-ptz-stop-all aria-label="Detener movimiento">&#9632;</button>
+              <button type="button" data-ptz-start="PTZMoveRight" data-ptz-stop="PTZMoveStop" aria-label="Mover a la derecha">&#8594;</button>
+              <button type="button" data-ptz-start="PTZMoveDownLeft" data-ptz-stop="PTZMoveStop" aria-label="Bajar a la izquierda">&#8601;</button>
+              <button type="button" data-ptz-start="PTZMoveDown" data-ptz-stop="PTZMoveStop" aria-label="Bajar">&#8595;</button>
+              <button type="button" data-ptz-start="PTZMoveDownRight" data-ptz-stop="PTZMoveStop" aria-label="Bajar a la derecha">&#8600;</button>
+            </div>
+            <div class="ptz-side-controls">
+              <div class="ptz-zoom" aria-label="Zoom de camara">
+                <span>Zoom</span>
+                <button type="button" data-ptz-start="PTZZoomOut" data-ptz-stop="PTZZoomStop" aria-label="Alejar">&#8722;</button>
+                <button type="button" data-ptz-start="PTZZoomIn" data-ptz-stop="PTZZoomStop" aria-label="Acercar">+</button>
+              </div>
+              <label class="ptz-speed" for="ptzSpeed">
+                <span>Velocidad</span>
+                <input type="range" id="ptzSpeed" min="0.05" max="1" step="0.05" value="0.25">
+                <output id="ptzSpeedValue" for="ptzSpeed">25%</output>
+              </label>
             </div>
           </div>
         </section>

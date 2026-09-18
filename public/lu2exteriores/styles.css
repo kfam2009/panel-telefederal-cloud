@@ -156,6 +156,10 @@ button:focus-visible {
   border-color: rgba(208, 162, 21, 0.65);
 }
 
+.tab-button[data-tab="ptz"] {
+  border-color: rgba(247, 144, 9, 0.7);
+}
+
 .tab-button[data-tab="publicidades"] {
   border-color: rgba(240, 68, 56, 0.6);
 }
@@ -186,6 +190,11 @@ button:focus-visible {
 
 .tab-button[data-tab="multiview"].is-active {
   background: var(--preview);
+  color: #111317;
+}
+
+.tab-button[data-tab="ptz"].is-active {
+  background: #f79009;
   color: #111317;
 }
 
@@ -1483,6 +1492,89 @@ h3 {
   width: 34px;
 }
 
+.ptz-panel {
+  border-color: rgba(247, 144, 9, 0.7);
+}
+
+.ptz-control {
+  align-items: center;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(230px, 320px) minmax(220px, 1fr);
+  justify-content: center;
+  margin: 0 auto;
+  max-width: 720px;
+}
+
+.ptz-pad {
+  aspect-ratio: 1;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(64px, 1fr));
+}
+
+.ptz-pad button,
+.ptz-zoom button {
+  align-items: center;
+  display: inline-flex;
+  font-size: 1.65rem;
+  justify-content: center;
+  min-height: 64px;
+  padding: 0;
+  touch-action: none;
+  user-select: none;
+}
+
+.ptz-pad button:active,
+.ptz-zoom button:active {
+  background: #f79009;
+  color: #111317;
+}
+
+.ptz-stop {
+  border-color: var(--cut);
+  color: var(--cut);
+}
+
+.ptz-side-controls {
+  display: grid;
+  gap: 20px;
+}
+
+.ptz-zoom {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(80px, 1fr) repeat(2, 64px);
+}
+
+.ptz-zoom span,
+.ptz-speed span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ptz-speed {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(80px, auto) minmax(120px, 1fr) 46px;
+}
+
+.ptz-speed input {
+  accent-color: #f79009;
+  width: 100%;
+}
+
+.ptz-speed output {
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-align: right;
+}
+
 .mv-position-label {
   color: var(--muted);
   font-size: 0.8rem;
@@ -1616,6 +1708,10 @@ h3 {
   }
 
   .mv-framing {
+    grid-template-columns: 1fr;
+  }
+
+  .ptz-control {
     grid-template-columns: 1fr;
   }
 

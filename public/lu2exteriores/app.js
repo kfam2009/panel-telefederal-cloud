@@ -99,7 +99,11 @@ const RESET_INPUTS = [
   { input: "23", label: "Reset Camara Plaza" }
 ];
 const VISIBLE_TABS = new Set(["cut", "zocalos", "multiview", "ptz"]);
-const PTZ_INPUT = "6";
+const PTZ_INPUTS = [
+  { input: "6", label: "PTZ GENERAL" },
+  { input: "3", label: "CAMARA 3 PTZ" }
+];
+const PTZ_INPUT_STORAGE_KEY = "lu2SelectedPtzInput";
 const TANDA_BUTTONS = [
   { key: "eti-1", label: "TANDA ESTA TODO INVENTADO 1", input: "49" },
   { key: "eti-2", label: "TANDA ESTA TODO INVENTADO 2", input: "50" },
@@ -1359,16 +1363,22 @@ function renderRadioMultiview() {
 }
 
 function renderPtzControls() {
-  const input = getInput(PTZ_INPUT);
+  const selector = document.querySelector("#ptzInputSelect");
+  const storedInput = localStorage.getItem(PTZ_INPUT_STORAGE_KEY);
+  const selectedInput = PTZ_INPUTS.some((item) => item.input === (selector?.value || storedInput))
+    ? (selector?.value || storedInput)
+    : PTZ_INPUTS[0].input;
+  const input = getInput(selectedInput);
+  if (selector) selector.value = selectedInput;
   if (els.ptzStatus) {
-    els.ptzStatus.textContent = input ? `Input 4: ${input.title}` : "Input 4 no disponible";
+    els.ptzStatus.textContent = input ? `Input ${selectedInput}: ${input.title}` : `Input ${selectedInput} no disponible`;
   }
   document.querySelectorAll("[data-ptz-start], [data-ptz-stop-all], [data-ptz-route]").forEach((button) => {
     button.disabled = !input;
   });
   document.querySelectorAll("[data-ptz-route]").forEach((button) => {
-    const isPreview = button.dataset.ptzRoute === "PreviewInput" && state.preview === PTZ_INPUT;
-    const isActive = button.dataset.ptzRoute === "CutDirect" && state.active === PTZ_INPUT;
+    const isPreview = button.dataset.ptzRoute === "PreviewInput" && state.preview === selectedInput;
+    const isActive = button.dataset.ptzRoute === "CutDirect" && state.active === selectedInput;
     button.classList.toggle("is-active", isPreview || isActive);
   });
 }
@@ -1378,9 +1388,10 @@ function ptzSpeed() {
 }
 
 async function sendPtzCommand(functionName, withSpeed = false) {
+  const inputNumber = document.querySelector("#ptzInputSelect")?.value || PTZ_INPUTS[0].input;
   await callVmix({
     Function: functionName,
-    Input: PTZ_INPUT,
+    Input: inputNumber,
     ...(withSpeed ? { Value: ptzSpeed() } : {})
   });
 }
@@ -3282,7 +3293,8 @@ document.addEventListener("click", async (event) => {
 
   routeButton.disabled = true;
   try {
-    await callVmix({ Function: routeButton.dataset.ptzRoute, Input: PTZ_INPUT });
+    const inputNumber = document.querySelector("#ptzInputSelect")?.value || PTZ_INPUTS[0].input;
+    await callVmix({ Function: routeButton.dataset.ptzRoute, Input: inputNumber });
     setLog(routeButton.dataset.ptzRoute === "PreviewInput" ? "Camara PTZ en Previo." : "Camara PTZ al aire.");
     await refreshState();
   } catch (error) {
@@ -3294,6 +3306,11 @@ document.addEventListener("click", async (event) => {
 
 els.ptzSpeed?.addEventListener("input", () => {
   els.ptzSpeedValue.textContent = `${Math.round(Number(els.ptzSpeed.value) * 100)}%`;
+});
+
+document.querySelector("#ptzInputSelect")?.addEventListener("change", (event) => {
+  localStorage.setItem(PTZ_INPUT_STORAGE_KEY, event.target.value);
+  renderPtzControls();
 });
 
 document.addEventListener("input", (event) => {

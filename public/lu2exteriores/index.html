@@ -146,7 +146,12 @@
         <section class="control-section ptz-panel" data-tab-panel="ptz" aria-label="Control PTZ" hidden>
           <div class="section-title">
             <h2>PTZ</h2>
-            <span class="multiview-target" id="ptzStatus">Camara 4</span>
+            <label for="ptzInputSelect">Camara PTZ</label>
+            <select id="ptzInputSelect">
+              <option value="6">PTZ GENERAL</option>
+              <option value="3">CAMARA 3 PTZ</option>
+            </select>
+            <span class="multiview-target" id="ptzStatus">PTZ GENERAL</span>
           </div>
           <div class="ptz-control">
             <div class="ptz-pad" aria-label="Movimiento de camara">

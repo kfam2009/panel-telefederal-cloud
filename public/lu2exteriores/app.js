@@ -62,12 +62,12 @@ const DIRECT_CUTS = [
   { input: "3", label: "Camara 3" },
   { input: "4", label: "Camara 4" },
   { input: "5", label: "Camara 5" },
+  { input: "6" },
   { input: "7" },
   { input: "8" },
   { input: "9" },
   { input: "10" },
-  { input: "31", label: "Video Horizontal" },
-  
+  { input: "31", label: "Video Horizontal" }
 ];
 const DIRECT_OVERLAY_INPUTS = [
   { slot: "1", input: "20" }

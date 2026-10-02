@@ -62,25 +62,12 @@ const DIRECT_CUTS = [
   { input: "3", label: "Camara 3" },
   { input: "4", label: "Camara 4" },
   { input: "5", label: "Camara 5" },
-  { input: "6" },
   { input: "7" },
   { input: "8" },
   { input: "9" },
   { input: "10" },
-  { input: "26" },
-  { input: "23" },
-  { input: "27" },
-  { input: "30" },
-  { input: "57" },
-  { input: "79" },
-  { input: "80" },
-  { input: "81" },
-  { input: "82" },
-  { input: "83" },
-  { input: "35", label: "Video Bahia" },
   { input: "31", label: "Video Horizontal" },
-  { input: "32", label: "Video Vertical" },
-  { input: "19", label: "LU2 loop" }
+  
 ];
 const DIRECT_OVERLAY_INPUTS = [
   { slot: "1", input: "20" }

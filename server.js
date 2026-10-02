@@ -15,7 +15,7 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const LU2_PUBLIC_DIR = path.join(PUBLIC_DIR, "lu2exteriores");
 const LU2_ZOCALO_DATA_PATH = path.join(__dirname, "lu2-zocalos-data.json");
 const LU2_ZOCALO_BACKUP_PATH = path.join(__dirname, "lu2-zocalos-data.backup.json");
-const LU2_CLOCK_WEATHER_INPUT = "59";
+const LU2_CLOCK_WEATHER_INPUT = "60";
 const LU2_CLOCK_WEATHER_OVERLAY_SLOT = "3";
 const LU2_CLOCK_WEATHER_FIELD = "TextBlock1.Text";
 const LU2_CLOCK_WEATHER_EXTRA_FIELD = "TextBlock2.Text";
@@ -23,24 +23,24 @@ const LU2_CLOCK_WEATHER_INTERVAL_MS = 3000;
 const LU2_CLOCK_WEATHER_ENABLED = false;
 const LU2_PROGRAM_NAME_FIELDS = ["TextBlock1.Text", "TextBlock2.Text"];
 const LU2_PROGRAM_NAME_DEFAULTS = {
-  "60": "PANORAMA",
-  "61": "ESTÁ TODO\nINVENTADO",
-  "62": "TODO CAMPO",
-  "63": "A LAS CHAPAS",
-  "64": "ALLICA Y PRIETA",
-  "65": "CIAO ITALIA",
-  "66": "DUPLEX",
-  "67": "ENTRETIEMPO",
-  "68": "HERENCIA CRIOLLA",
-  "69": "MÚSICA",
-  "70": "NOCHE A NOCHE",
-  "71": "NOTICIAS EN COMPAÑÍA",
-  "72": "RADIOVISIÓN\nDEPORTIVA",
-  "73": "LECTURA\nLA NUEVA",
-  "74": "EL EXPRESO",
-  "75": "LU2 AM FM",
-  "76": "LA VOZ DEL CAMPO",
-  "77": "INFORME DOS"
+  "61": "PANORAMA",
+  "62": "ESTÁ TODO\nINVENTADO",
+  "63": "TODO CAMPO",
+  "64": "A LAS CHAPAS",
+  "65": "ALLICA Y PRIETA",
+  "66": "CIAO ITALIA",
+  "67": "DUPLEX",
+  "68": "ENTRETIEMPO",
+  "69": "HERENCIA CRIOLLA",
+  "70": "MÚSICA",
+  "71": "NOCHE A NOCHE",
+  "72": "NOTICIAS EN COMPAÑÍA",
+  "73": "RADIOVISIÓN\nDEPORTIVA",
+  "74": "LECTURA\nLA NUEVA",
+  "75": "EL EXPRESO",
+  "76": "LU2 AM FM",
+  "77": "LA VOZ DEL CAMPO",
+  "78": "INFORME DOS"
 };
 const FFMPEG_PATH = resolveFfmpegPath();
 const PREVIEW_SNAPSHOT_PATH = path.join(__dirname, "preview-live.jpg");
@@ -547,7 +547,7 @@ function proxyLu2Vmix(req, res) {
 
   const isLegacyClockUpdate =
     functionName === "SetText" &&
-    (inputNumber === LU2_CLOCK_WEATHER_INPUT || inputNumber === "60") &&
+    (inputNumber === LU2_CLOCK_WEATHER_INPUT || inputNumber === "59") &&
     (selectedName === LU2_CLOCK_WEATHER_FIELD || selectedName === LU2_CLOCK_WEATHER_EXTRA_FIELD) &&
     (/^\d{1,2}:\d{2}(\s+\d+\s*°C)?$/.test(value) || /^\d+\s*°C$/.test(value) || value === "");
 
@@ -558,7 +558,7 @@ function proxyLu2Vmix(req, res) {
 
   if (
     functionName === "SetText" &&
-    inputNumber === "60" &&
+    inputNumber === "59" &&
     (selectedName === "TextBlock1.Text" || selectedName === "TextBlock2.Text") &&
     (/^\d{1,2}:\d{2}(\s+\d+\s*°C)?$/.test(value) || /^\d+\s*°C$/.test(value) || value === "")
   ) {

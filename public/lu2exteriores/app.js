@@ -50,11 +50,11 @@ const MAIN_ZOCALO_INPUT = "58";
 const MAIN_ZOCALO_OVERLAY_SLOT = "1";
 const SYNC_PREVIEW_EXTERNAL3 = false;
 const GRAPHICS_TO_PREVIEW = false;
-const MULTIVIEW_INPUTS = ["6", "7", "8", "9"];
+const MULTIVIEW_INPUTS = ["7", "8", "9", "10"];
 const MULTIVIEW_BACKGROUND_LAYER = "1";
-const MULTIVIEW_BACKGROUND_INPUT = "11";
+const MULTIVIEW_BACKGROUND_INPUT = "12";
 const MULTIVIEW_LAYER_INDEXES = ["9", "8", "7", "6"];
-const MULTIVIEW_CAMERA_INPUTS = ["1", "2", "3", "4", "5", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87"];
+const MULTIVIEW_CAMERA_INPUTS = ["1", "2", "3", "4", "5", "6", "23", "27", "30", "57", "79", "80", "81", "82", "83"];
 const MULTIVIEW_STORAGE_KEY = "multiviewAssignmentsLayers9To6";
 const DIRECT_CUTS = [
   { input: "1", label: "Camara 1" },
@@ -62,62 +62,66 @@ const DIRECT_CUTS = [
   { input: "3", label: "Camara 3" },
   { input: "4", label: "Camara 4" },
   { input: "5", label: "Camara 5" },
-  { input: "6", label: "2 Camaras" },
-  { input: "7", label: "3 Camaras" },
-  { input: "8", label: "4 Camaras" },
-  { input: "9", label: "5 Camaras" },
-  { input: "25", label: "5 camaras mas panelista" },
-  { input: "56", label: "Camara Plaza" },
-  { input: "82" },
-  { input: "83" },
-  { input: "84" },
-  { input: "85" },
-  { input: "86" },
-  { input: "34", label: "Video Bahia" },
-  { input: "30", label: "Video Horizontal" },
-  { input: "31", label: "Video Vertical" },
-  { input: "18", label: "LU2 loop" }
+  { input: "6", label: "PTZ General" },
+  { input: "7", label: "2 Camaras" },
+  { input: "8", label: "3 Camaras" },
+  { input: "9", label: "4 Camaras" },
+  { input: "10", label: "5 Camaras" },
+  { input: "26", label: "5 camaras mas panelista" },
+  { input: "23", label: "Camara Plaza" },
+  { input: "27", label: "Desktop Capture" },
+  { input: "30", label: "Camara SRT" },
+  { input: "57", label: "Camara RTSP" },
+  { input: "79", label: "Camara 1 Primera" },
+  { input: "80", label: "Camara 1 Segunda" },
+  { input: "81", label: "Camara 2 Primera" },
+  { input: "82", label: "Camara 2 Segunda" },
+  { input: "83", label: "Camara SRT remota" },
+  { input: "35", label: "Video Bahia" },
+  { input: "31", label: "Video Horizontal" },
+  { input: "32", label: "Video Vertical" },
+  { input: "19", label: "LU2 loop" }
 ];
 const DIRECT_OVERLAY_INPUTS = [
-  { slot: "1", input: "19" }
+  { slot: "1", input: "20" }
 ];
-const LINE_AUDIO_INPUT = "10";
+const LINE_AUDIO_INPUT = "11";
 const PUBLI_SCRIPT_NAME = "PUBLI1";
 const PUBLI_LIST_INPUT = "45";
 const TANDAS_OUTPUT = "4";
-const TANDA_INPUTS = ["48", "49", "50", "51", "52", "53", "54", "55"];
+const TANDA_INPUTS = ["49", "50", "51", "52", "53", "54", "55", "56"];
 const RESET_INPUTS = [
   { input: "1", label: "Reset Camara 1" },
   { input: "2", label: "Reset Camara 2" },
   { input: "3", label: "Reset Camara 3" },
   { input: "4", label: "Reset Camara 4" },
   { input: "5", label: "Reset Camara 5" },
-  { input: "56", label: "Reset Camara Plaza" }
+  { input: "23", label: "Reset Camara Plaza" }
 ];
 const VISIBLE_TABS = new Set(["cut", "zocalos", "multiview", "ptz"]);
-const PTZ_INPUT = "4";
+const PTZ_INPUT = "6";
 const TANDA_BUTTONS = [
-  { key: "eti-1", label: "TANDA ESTA TODO INVENTADO 1", input: "48" },
-  { key: "eti-2", label: "TANDA ESTA TODO INVENTADO 2", input: "49" },
-  { key: "eti-3", label: "TANDA ESTA TODO INVENTADO 3", input: "50" },
-  { key: "eti-4", label: "TANDA ESTA TODO INVENTADO 4", input: "51" },
-  { key: "panorama-1", label: "TANDA PANORAMA 1", input: "52" },
-  { key: "panorama-2", label: "TANDA PANORAMA 2", input: "53" },
-  { key: "panorama-3", label: "TANDA PANORAMA 3", input: "54" },
-  { key: "panorama-4", label: "TANDA PANORAMA 4", input: "55" }
+  { key: "eti-1", label: "TANDA ESTA TODO INVENTADO 1", input: "49" },
+  { key: "eti-2", label: "TANDA ESTA TODO INVENTADO 2", input: "50" },
+  { key: "eti-3", label: "TANDA ESTA TODO INVENTADO 3", input: "51" },
+  { key: "eti-4", label: "TANDA ESTA TODO INVENTADO 4", input: "52" },
+  { key: "panorama-1", label: "TANDA PANORAMA 1", input: "53" },
+  { key: "panorama-2", label: "TANDA PANORAMA 2", input: "54" },
+  { key: "panorama-3", label: "TANDA PANORAMA 3", input: "55" },
+  { key: "panorama-4", label: "TANDA PANORAMA 4", input: "56" }
 ];
 const UTC_OVERLAYS = [
-  { input: "45", label: "Tanda LU2 BVC", slot: "4" },
-  { input: "46", label: "Tanda Esta Todo Inventado", slot: "4" },
-  { input: "47", label: "Tanda Panorama", slot: "4" },
-  { input: "48", label: "ETI 01", slot: "4" },
-  { input: "49", label: "ETI 02", slot: "4" },
-  { input: "50", label: "ETI 03", slot: "4" },
-  { input: "51", label: "ETI 04", slot: "4" },
-  { input: "52", label: "Panorama 01", slot: "4" },
-  { input: "53", label: "Panorama 02", slot: "4" },
-  { input: "54", label: "Panorama 03", slot: "4" },
-  { input: "55", label: "Panorama 04", slot: "4" }
+  { input: "46", label: "Tanda LU2 BVC", slot: "4" },
+  { input: "47", label: "Tanda Esta Todo Inventado", slot: "4" },
+  { input: "48", label: "Tanda Panorama", slot: "4" },
+  { input: "49", label: "ETI 01", slot: "4" },
+  { input: "50", label: "ETI 02", slot: "4" },
+  { input: "51", label: "ETI 03", slot: "4" },
+  { input: "52", label: "ETI 04", slot: "4" },
+  { input: "53", label: "Panorama 01", slot: "4" },
+  { input: "54", label: "Panorama 02", slot: "4" },
+  { input: "55", label: "Panorama 03", slot: "4" },
+  { input: "56", label: "Panorama 04", slot: "4" }
 ];
 const ZOCALO_DEFAULTS_VERSION = "lu2-principal-sin-referencia-2026-08-25";
 const DEFAULT_ZOCALOS = {
@@ -225,38 +229,38 @@ const ZOCALO_TYPES = [
     id: "lu2-referencia",
     tab: "principal",
     label: "Referencia",
-    input: "57",
+    input: "59",
     overlay: "2",
     lines: 1,
     fields: ["TextBlock1.Text"],
     fieldLabels: ["Referencia"]
   },
 ];
-const CLOCK_WEATHER_INPUT = "59";
+const CLOCK_WEATHER_INPUT = "60";
 const CLOCK_WEATHER_OVERLAY_SLOT = "3";
 const CLOCK_WEATHER_FIELD = "TextBlock1.Text";
 const CLOCK_WEATHER_EXTRA_FIELD = "TextBlock2.Text";
 const CLOCK_WEATHER_ENABLED = false;
 const PROGRAM_NAME_OVERLAY_SLOT = "4";
 const PROGRAM_NAME_INPUTS = [
-  { input: "73", label: "LECTURA LA NUEVA" },
-  { input: "74", label: "EL EXPRESO" },
-  { input: "75", label: "LU2 AM FM" },
-  { input: "76", label: "LA VOZ DEL CAMPO" },
-  { input: "77", label: "INFORME DOS" },
-  { input: "60", label: "PANORAMA" },
-  { input: "61", label: "ESTA TODO INVENTADO" },
-  { input: "62", label: "TODO CAMPO" },
-  { input: "63", label: "A LAS CHAPAS" },
-  { input: "64", label: "ALLICA Y PRIETA" },
-  { input: "65", label: "CIAO ITALIA" },
-  { input: "66", label: "DUPLEX" },
-  { input: "67", label: "ENTRETIEMPO" },
-  { input: "68", label: "HERENCIA CRIOLLA" },
-  { input: "69", label: "MÚSICA" },
-  { input: "70", label: "NOCHE A NOCHE" },
-  { input: "71", label: "NOTICIAS EN COMPAÑÍA" },
-  { input: "72", label: "RADIOVISIÓN DEPORTIVA" }
+  { input: "74", label: "LECTURA LA NUEVA" },
+  { input: "75", label: "EL EXPRESO" },
+  { input: "76", label: "LU2 AM FM" },
+  { input: "77", label: "LA VOZ DEL CAMPO" },
+  { input: "78", label: "INFORME DOS" },
+  { input: "61", label: "PANORAMA" },
+  { input: "62", label: "ESTA TODO INVENTADO" },
+  { input: "63", label: "TODO CAMPO" },
+  { input: "64", label: "A LAS CHAPAS" },
+  { input: "65", label: "ALLICA Y PRIETA" },
+  { input: "66", label: "CIAO ITALIA" },
+  { input: "67", label: "DUPLEX" },
+  { input: "68", label: "ENTRETIEMPO" },
+  { input: "69", label: "HERENCIA CRIOLLA" },
+  { input: "70", label: "MÚSICA" },
+  { input: "71", label: "NOCHE A NOCHE" },
+  { input: "72", label: "NOTICIAS EN COMPAÑÍA" },
+  { input: "73", label: "RADIOVISIÓN DEPORTIVA" }
 ];
 const LOGO_INPUT = "141";
 const LOGO_FIELD = "Image1.Source";
@@ -279,19 +283,19 @@ const LOGO_LIST = [
 const PHOTO_STORAGE_KEY = "lu2PanelistasPhotoList";
 const PHOTO_SELECTED_KEY = "selectedLu2PanelistasPhotoIndex";
 const PHOTO_TEMPLATE_INPUTS = [
-  { input: "23", field: "Image2.Source" }
+  { input: "24", field: "Image2.Source" }
 ];
-const PHOTO_MULTIVIEW_INPUT = "25";
+const PHOTO_MULTIVIEW_INPUT = "26";
 const PHOTO_MULTIVIEW_LAYER = "6";
-const PHOTO_MULTIVIEW_SOURCE = "23";
-const PHOTO_OVERLAY_INPUT = "23";
+const PHOTO_MULTIVIEW_SOURCE = "24";
+const PHOTO_OVERLAY_INPUT = "24";
 const PHOTO_OVERLAY_SLOT = "4";
 const RADIO_MV_LAYOUTS = [
-  { input: "6", label: "2 Camaras", layers: ["2", "3"], positions: ["Posicion 1", "Posicion 2"], special: { "3": ["29"] } },
-  { input: "7", label: "3 Camaras", layers: ["2", "3", "4"], positions: ["Posicion 1", "Posicion 2", "Posicion 3"], special: {} },
-  { input: "8", label: "4 Camaras", layers: ["2", "3", "4", "5"], positions: ["Posicion 1", "Posicion 2", "Posicion 3", "Posicion 4"], special: {} },
-  { input: "9", label: "5 Camaras", layers: ["2", "3", "4", "5", "6"], positions: ["Posicion 1", "Posicion 2", "Posicion 3", "Posicion 4", "Posicion 5"], special: {} },
-  { input: "25", label: "4 camaras + panelista", layers: ["2", "3", "4", "5"], positions: ["Camara 1", "Camara 2", "Camara 3", "Camara 4"], special: {} }
+  { input: "7", label: "2 Camaras", layers: ["2", "3"], positions: ["Posicion 1", "Posicion 2"], special: { "3": ["29"] } },
+  { input: "8", label: "3 Camaras", layers: ["2", "3", "4"], positions: ["Posicion 1", "Posicion 2", "Posicion 3"], special: {} },
+  { input: "9", label: "4 Camaras", layers: ["2", "3", "4", "5"], positions: ["Posicion 1", "Posicion 2", "Posicion 3", "Posicion 4"], special: {} },
+  { input: "10", label: "5 Camaras", layers: ["2", "3", "4", "5", "6"], positions: ["Posicion 1", "Posicion 2", "Posicion 3", "Posicion 4", "Posicion 5"], special: {} },
+  { input: "26", label: "4 camaras + panelista", layers: ["2", "3", "4", "5"], positions: ["Camara 1", "Camara 2", "Camara 3", "Camara 4"], special: {} }
 ];
 const RADIO_MV_SOURCES = [
   { input: "1", label: "Camara 1" },
@@ -299,16 +303,16 @@ const RADIO_MV_SOURCES = [
   { input: "3", label: "Camara 3" },
   { input: "4", label: "Camara 4" },
   { input: "5", label: "Camara 5" },
-  { input: "78", label: "Input 78" },
-  { input: "79", label: "Input 79" },
-  { input: "80", label: "Input 80" },
-  { input: "81", label: "Input 81" },
-  { input: "82", label: "Input 82" },
-  { input: "83", label: "Input 83" },
-  { input: "84", label: "Input 84" },
-  { input: "85", label: "Input 85" },
-  { input: "86", label: "Input 86" },
-  { input: "87", label: "Input 87" }
+  { input: "6", label: "PTZ General" },
+  { input: "23", label: "Camara Plaza" },
+  { input: "27", label: "Desktop Capture" },
+  { input: "30", label: "Camara SRT" },
+  { input: "57", label: "Camara RTSP" },
+  { input: "79", label: "Camara 1 Primera" },
+  { input: "80", label: "Camara 1 Segunda" },
+  { input: "81", label: "Camara 2 Primera" },
+  { input: "82", label: "Camara 2 Segunda" },
+  { input: "83", label: "Camara SRT remota" }
 ];
 const RADIO_MV_SPECIAL_SOURCES = {};
 const RADIO_MV_SELECTED_KEY = "selectedRadioMultiviewLayout";
@@ -330,7 +334,7 @@ const DIRECT_THUMB_INPUTS = new Set([]);
 const RADIO_LAYOUTS = [
 ];
 const RADIO_BACKGROUND_LAYER = "1";
-const RADIO_BACKGROUND_INPUT = "17";
+const RADIO_BACKGROUND_INPUT = "18";
 const RADIO_LAYER_INDEXES = ["2", "3", "4", "5", "6"];
 const RADIO_CAMERA_INPUTS = ["1", "2", "3", "4", "5"];
 const RADIO_STORAGE_KEY = "radioMultiviewAssignments";
@@ -2078,7 +2082,7 @@ function renderOverlays() {
   programCard.className = "zocalo-card program-name-card";
   const actions = document.createElement("div");
   actions.className = "program-name-actions";
-  PROGRAM_NAME_INPUTS.filter((program) => ["60", "61"].includes(program.input)).forEach((program) => {
+  PROGRAM_NAME_INPUTS.filter((program) => ["61", "62"].includes(program.input)).forEach((program) => {
     const input = getInput(program.input);
     const button = document.createElement("button");
     button.type = "button";

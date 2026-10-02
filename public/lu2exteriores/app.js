@@ -54,7 +54,7 @@ const MULTIVIEW_INPUTS = ["7", "8", "9", "10"];
 const MULTIVIEW_BACKGROUND_LAYER = "1";
 const MULTIVIEW_BACKGROUND_INPUT = "12";
 const MULTIVIEW_LAYER_INDEXES = ["9", "8", "7", "6"];
-const MULTIVIEW_CAMERA_INPUTS = ["1", "2", "3", "4", "5", "6", "23", "27", "30", "57", "79", "80", "81", "82", "83"];
+const MULTIVIEW_CAMERA_INPUTS = ["1", "2", "3", "4", "5", "6", "23", "27", "30", "31", "57", "79", "80", "81", "82", "83"];
 const MULTIVIEW_STORAGE_KEY = "multiviewAssignmentsLayers9To6";
 const DIRECT_CUTS = [
   { input: "1", label: "Camara 1" },
@@ -311,6 +311,7 @@ const RADIO_MV_SOURCES = [
   { input: "23", label: "Camara Plaza" },
   { input: "27", label: "Desktop Capture" },
   { input: "30", label: "Camara SRT" },
+  { input: "31", label: "Videos Horizontal" },
   { input: "57", label: "Camara RTSP" },
   { input: "79", label: "Camara 1 Primera" },
   { input: "80", label: "Camara 1 Segunda" },

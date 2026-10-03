@@ -1541,6 +1541,27 @@ h3 {
   gap: 20px;
 }
 
+.ptz-preview-inputs {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 24px auto 0;
+  max-width: 720px;
+}
+
+.ptz-preview-inputs button {
+  border-color: var(--preview);
+  font-size: 0.82rem;
+  font-weight: 900;
+  min-height: 48px;
+  text-transform: uppercase;
+}
+
+.ptz-preview-inputs button.is-active {
+  background: var(--preview);
+  color: #111317;
+}
+
 .ptz-routing {
   display: grid;
   gap: 8px;

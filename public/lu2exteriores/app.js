@@ -1360,6 +1360,10 @@ function renderPtzControls() {
     const isActive = button.dataset.ptzRoute === "CutDirect" && state.active === selectedInput;
     button.classList.toggle("is-active", isPreview || isActive);
   });
+  document.querySelectorAll("[data-ptz-preview-input]").forEach((button) => {
+    button.disabled = !getInput(button.dataset.ptzPreviewInput);
+    button.classList.toggle("is-active", state.preview === button.dataset.ptzPreviewInput);
+  });
 }
 
 function ptzSpeed() {
@@ -3267,6 +3271,20 @@ document.addEventListener("click", async (event) => {
 });
 
 document.addEventListener("click", async (event) => {
+  const previewInputButton = event.target.closest("[data-ptz-preview-input]");
+  if (previewInputButton && !previewInputButton.disabled) {
+    previewInputButton.disabled = true;
+    try {
+      await callVmix({ Function: "PreviewInput", Input: previewInputButton.dataset.ptzPreviewInput });
+      setLog(`Input ${previewInputButton.dataset.ptzPreviewInput} en Previo.`);
+      await refreshState();
+    } catch (error) {
+      setLog(error.message);
+    } finally {
+      previewInputButton.disabled = false;
+    }
+    return;
+  }
   const routeButton = event.target.closest("[data-ptz-route]");
   if (!routeButton || routeButton.disabled) return;
 
